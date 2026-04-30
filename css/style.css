@@ -1,0 +1,284 @@
+body {
+    margin: 0;
+    font-family: 'Speedee', Arial, sans-serif;
+    background-color: #f4f4f4;
+}
+
+.main-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 40px;
+}
+
+header {
+    background-color: #FFBC0D;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    padding: 10px 0;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+
+.nav-container {
+    max-width: 100%;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+}
+
+/* Logo Area */
+.logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    width: fit-content;
+}
+
+.logo img {
+    height: 45px;
+}
+
+.logo span {
+    font-weight: bold;
+    font-size: 1.2rem;
+    color: #292929;
+}
+
+.search-bar {
+    flex-grow: 1;
+    max-width: 400px;
+    margin: 0 10px;
+    margin-left: 5px;
+}
+
+nav {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+nav a {
+    text-decoration: none;
+    color: #292929;
+    font-weight: 900;
+    font-size: 14px;
+}
+
+.login-btn {
+    background-color: #ffbc0d;
+    /* McDo Yellow */
+    padding: 1px 2px;
+    border-radius: 5px;
+    color: #292929;
+}
+
+/* Bag/Cart Icon */
+nav img[alt="bag"] {
+    height: 25px;
+    cursor: pointer;
+}
+
+.search-bar input {
+    width: 400px;
+    padding: 10px;
+    border-radius: 5px;
+    border: none;
+}
+
+.specials {
+    padding: 40px 10%;
+}
+
+.product-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 25px;
+    margin-top: 20px;
+    justify-content: center;
+    padding: 20px;
+}
+
+.card {
+    background: #fff;
+    border-radius: 15px;
+    padding: 15px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+    transition: 0.3s;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+}
+
+.card-image img {
+    width: 100%;
+    height: auto;
+}
+
+.card h3 {
+    font-size: 1.1rem;
+    margin: 10px 0;
+    color: #292929;
+}
+
+.price {
+    font-weight: bold;
+    color: #DB0007;
+    /* McDo Red */
+    font-size: 1.2rem;
+}
+
+.qty-selector {
+    margin: 10px 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.qty-input {
+    width: 50px;
+    padding: 5px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.add-to-cart {
+    background-color: #FFBC0D;
+    /* McDo Yellow */
+    border: none;
+    padding: 10px;
+    width: 100%;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.add-to-cart:hover {
+    background-color: #e5a90b;
+}
+
+
+
+
+
+/*********** Circular Category Styles ***********/
+.category-section {
+    margin: 40px auto;
+}
+
+.category-wrapper {
+    position: relative;
+    /* Exactly enough for 5 items (5 * 160px) + 4 gaps (4 * 20px) = 880px */
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.category-grid {
+    display: flex;
+    gap: 50px;
+    /* This hides the items that go past the 880px limit */
+    overflow-x: auto;
+    scroll-behavior: smooth;
+    padding: 10px 0;
+    width: 100%;
+
+    /* Hide scrollbar but allow scrolling */
+    -webkit-overflow-scrolling: touch;
+    -ms-overflow-style: none;
+    /* IE and Edge */
+    scrollbar-width: none;
+    /* Firefox */
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.category-grid::-webkit-scrollbar {
+    display: none;
+}
+
+.cat-item {
+    text-decoration: none;
+    color: #292929;
+    width: 150px;
+    text-align: center;
+    transition: 0.2s ease-in-out;
+    flex: 0 0 160px;
+    text-align: center;
+}
+
+.cat-item img {
+    width: 100%;
+    height: auto;
+    max-width: 120px;
+    aspect-ratio: 1 / 1;
+    /* Ensures perfect circle */
+    border-radius: 50%;
+    /* The key to the circle */
+    background-color: #FFBC0D;
+    object-fit: contain;
+    padding: 15px;
+    /* Spacing inside the circle */
+    margin-bottom: 10px;
+}
+
+.cat-item span {
+    font-weight: bold;
+    font-size: 14px;
+    display: block;
+}
+
+/* Hover effect on circular items */
+.cat-item:hover {
+    transform: scale(1.05);
+}
+
+/* Section Headings Styling */
+h2 {
+    font-family: 'Speedee', sans-serif;
+    font-weight: bold;
+    font-size: 28px;
+    color: #292929;
+    margin-bottom: 5px;
+}
+
+.subtext {
+    font-size: 16px;
+    color: #555;
+    margin-bottom: 25px;
+}
+
+.scroll-container {
+    position: relative;
+}
+
+.scroll-btn.left,
+.scroll-btn.right {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+    border-radius: 50%;
+    border: none;
+    background-color: #927d4a;
+    cursor: pointer;
+    width: 25px;
+    height: 25px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #FFFFFF;
+    font-size: 16px;
+}
+
+.scroll-btn.left {
+    left: -50px;
+}
+
+.scroll-btn.right {
+    right: -50px;
+}
