@@ -1,0 +1,197 @@
+SET FOREIGN_KEY_CHECKS = 0;
+
+-- 1. McBranch
+CREATE TABLE McBranch (
+    Brnch_Id INT AUTO_INCREMENT PRIMARY KEY,
+    Brnch_Street VARCHAR(255),
+    Brnch_Barangay VARCHAR(255),
+    Brnch_City VARCHAR(255),
+    Brnch_Municipality VARCHAR(255),
+    Brnch_PostalCode VARCHAR(10),
+    Brnch_Phone VARCHAR(20)
+);
+
+-- 2. Customer
+CREATE TABLE Customer (
+    Cust_Id INT AUTO_INCREMENT PRIMARY KEY,
+    Cust_FName VARCHAR(100),
+    Cust_LName VARCHAR(100),
+    Cust_Email VARCHAR(150) UNIQUE,
+    Cust_Password VARCHAR(255),
+    Cust_Phone VARCHAR(20),
+    Cust_CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 3. Staff
+CREATE TABLE Staff (
+    Staff_Id INT AUTO_INCREMENT PRIMARY KEY,
+    Staff_Brnch_Id INT,
+    Staff_Role VARCHAR(50),
+    Staff_FName VARCHAR(100),
+    Staff_LName VARCHAR(100),
+    Staff_Phone VARCHAR(20),
+    Staff_Email VARCHAR(150),
+    FOREIGN KEY (Staff_Brnch_Id) REFERENCES McBranch(Brnch_Id)
+);
+
+-- 4. Address
+CREATE TABLE Address (
+    Add_Id INT AUTO_INCREMENT PRIMARY KEY,
+    Add_Cust_Id INT,
+    Add_Street VARCHAR(255),
+    Add_Barangay VARCHAR(255),
+    Add_City VARCHAR(255),
+    Add_Municipality VARCHAR(255),
+    Add_PostalCode VARCHAR(10),
+    FOREIGN KEY (Add_Cust_Id) REFERENCES Customer(Cust_Id)
+);
+
+-- 5. McdoMenuItem
+CREATE TABLE McdoMenuItem (
+    Menu_MenuItemId INT AUTO_INCREMENT PRIMARY KEY,
+    Menu_Name VARCHAR(255),
+    Menu_Description TEXT,
+    Menu_Price DECIMAL(10,2),
+    Menu_Category VARCHAR(100),
+    Menu_ImageURL VARCHAR(255),
+    Menu_Available BOOLEAN DEFAULT 1
+);
+
+-- 9. McdoCoupon (Created before McOrder because of FK)
+CREATE TABLE McdoCoupon (
+    Coupn_Id INT AUTO_INCREMENT PRIMARY KEY,
+    Coupn_Code VARCHAR(50) UNIQUE,
+    Coupn_Description TEXT,
+    Coupn_DiscountValue DECIMAL(10,2),
+    Coupn_MinOrderAmount DECIMAL(10,2),
+    Coupn_MaxDiscount DECIMAL(10,2),
+    Coupn_ExpiryDate DATE,
+    Coupn_IsActive BOOLEAN DEFAULT 1
+);
+
+-- 7. McOrder
+CREATE TABLE McOrder (
+    Order_Id INT AUTO_INCREMENT PRIMARY KEY,
+    Order_Cust_Id INT,
+    Order_Coup_Id INT NULL,
+    Order_OrderDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    Order_Status VARCHAR(50),
+    Order_TotalAmount DECIMAL(10,2),
+    Order_Quantity INT,
+    Order_DeliveryFee DECIMAL(10,2),
+    FOREIGN KEY (Order_Cust_Id) REFERENCES Customer(Cust_Id),
+    FOREIGN KEY (Order_Coup_Id) REFERENCES McdoCoupon(Coupn_Id)
+);
+
+-- 6. CartItem
+CREATE TABLE CartItem (
+    Cart_Id INT AUTO_INCREMENT PRIMARY KEY,
+    Cart_Cust_Id INT,
+    Cart_Menu_MenuItemId INT,
+    Cart_Quantity INT,
+    Cart_ItemPrice DECIMAL(10,2),
+    Cart_Total DECIMAL(10,2),
+    FOREIGN KEY (Cart_Cust_Id) REFERENCES Customer(Cust_Id),
+    FOREIGN KEY (Cart_Menu_MenuItemId) REFERENCES McdoMenuItem(Menu_MenuItemId)
+);
+
+-- 8. McDeliveryStatus
+CREATE TABLE McDeliveryStatus (
+    Dlvry_Id INT AUTO_INCREMENT PRIMARY KEY,
+    Dlvry_Order_Id INT,
+    Dlvry_StatusUpdate VARCHAR(100),
+    Dlvry_DateTime TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (Dlvry_Order_Id) REFERENCES McOrder(Order_Id)
+);
+
+-- 10. DeliveryRider
+CREATE TABLE DeliveryRider (
+    Rider_Id INT AUTO_INCREMENT PRIMARY KEY,
+    Rider_Dlvry_Id INT,
+    Rider_Name VARCHAR(150),
+    Rider_Phone VARCHAR(20),
+    Rider_Email VARCHAR(150),
+    Rider_Status VARCHAR(50),
+    FOREIGN KEY (Rider_Dlvry_Id) REFERENCES McDeliveryStatus(Dlvry_Id)
+);
+
+-- 11. Payment
+CREATE TABLE Payment (
+    Pay_Id INT AUTO_INCREMENT PRIMARY KEY,
+    Pay_Order_Id INT,
+    Pay_PaymentType VARCHAR(50),
+    Pay_PaymentStatus VARCHAR(50),
+    Pay_PaidAmount DECIMAL(10,2),
+    Pay_TransactionDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (Pay_Order_Id) REFERENCES McOrder(Order_Id)
+);
+
+SET FOREIGN_KEY_CHECKS = 1;
+
+-- Insert Home Page items into McdoMenuItem
+INSERT INTO McdoMenuItem (Menu_Name, Menu_Price, Menu_Category, Menu_ImageURL) VALUES 
+('Cheeseburger Meal', 185.00, 'Dinner Specials', 'images/products/cheeseburger.jpg'),
+('1-pc. Mushroom Pepper Steak', 120.00, 'Dinner Specials', 'images/products/mushroom.jpg'),
+('6-pc. Chicken McNuggets', 175.00, 'Dinner Specials', 'images/products/nuggets.jpg'),
+('20-pc. Chicken McNuggets', 350.00, 'Dinner Specials', 'images/products/nuggetss.jpg');
+
+
+INSERT INTO McdoMenuItem (Menu_Name, Menu_Price, Menu_Category, Menu_ImageURL) VALUES 
+('Crispy Chicken Fillet Sandwich w/ Fries Meal', 180.00, 'Breakfast', 'images/products/chickfillet.jpg'),
+('Burger McDo Meal', 160.00, 'Breakfast', 'images/products/burgmeal.jpg'),
+('Sausage McMuffin w/ Egg Meal', 176.00, 'Breakfast', 'images/products/mcmuffin.png'),
+('Longganisa w/ Egg Meal', 138.00, 'Breakfast', 'images/products/longganisa.png'),
+('2-pc. Hotcakes with Hashbrown Meal', 152.00, 'Breakfast', 'images/products/pancake.jpg');
+
+
+UPDATE mcdomenuitem
+SET Menu_ImageURL = 'images/featured/crispyfillet.png'
+WHERE Menu_MenuItemId = 15;
+
+UPDATE mcdomenuitem
+SET Menu_ImageURL = 'images/featured/goldenfillet.png'
+WHERE Menu_MenuItemId = 16;
+
+UPDATE mcdomenuitem
+SET Menu_ImageURL = 'images/featured/filletmeal.png'
+WHERE Menu_MenuItemId = 17;
+
+UPDATE mcdomenuitem
+SET Menu_ImageURL = 'images/featured/mushroommeal.png'
+WHERE Menu_MenuItemId = 18;
+
+UPDATE mcdomenuitem
+SET Menu_ImageURL = 'images/featured/raspberry.png'
+WHERE Menu_MenuItemId = 19;
+
+-- Insert the 5 "McDelivery Exclusives" from your second screenshot
+INSERT INTO McdoMenuItem (Menu_Name, Menu_Price, Menu_Category, Menu_ImageURL, Menu_Available) VALUES 
+('Double McChicken Meal', 269.00, 'Exclusives', 'images/products/doublechicken.png', 1),
+('Double Big Mac Meal', 353.00, 'Exclusives', 'images/products/bigmeal.png', 1),
+('The BCB Meal', 283.00, 'Exclusives', 'images/products/bcb.png', 1),
+('Mega Meal - Chicken McDo w/ Fries & McFlurry', 239.00, 'Exclusives', 'images/products/megameal.png', 1),
+('Mega Meal - Chicken McDo w/ Fries & Burger McDo', 239.00, 'Exclusives', 'images/products/mealburgfries.png', 1);
+
+
+-- Insert the 5 "Featured" items from your latest screenshot
+INSERT INTO McdoMenuItem (Menu_Name, Menu_Price, Menu_Category, Menu_ImageURL, Menu_Available) VALUES 
+('2-pc. Crispy Chicken Fillet Ala King Meal', 152.00, 'Featured', 'images/featured/crispyfillet.png', 1),
+('2-pc. Golden Curry Fillet Meal', 152.00, 'Featured', 'images/featured/goldenfillet.png', 1),
+('2-pc. Crispy Chicken Fillet Meal', 142.00, 'Featured', 'images/featured/filletmeal.png', 1),
+('Sulit-Busog 2pc. Mushroom Pepper Steak Small Meal', 133.00, 'Featured', 'images/featured/mushroommeal.png', 1),
+('Medium Fries w/ Cosmic Raspberry McFloat', 130.00, 'Featured', 'images/featured/raspberry.png', 1);
+
+INSERT INTO McdoMenuItem (Menu_Name, Menu_Price, Menu_Category, Menu_ImageURL, Menu_Available) VALUES 
+('McSpaghetti Meal, 104.00, 'Dinner Specials', 'images/products/spaghettimeal.png', 1);
+
+INSERT INTO McdoMenuItem 
+(Menu_Name, Menu_Description, Menu_Price, Menu_Category, Menu_ImageURL, Menu_Available) 
+VALUES 
+('Cheeseburger with Dunk Meal', 'Limited time only', 225.00, 'Featured', 'images/products/cheeseburger_dunk.jpg', 1),
+('Cheese Dunk', 'Limited time only', 55.00, 'Featured', 'images/products/cheese_dunk.jpg', 1),
+('Chili Con Carne Dunk', 'Limited time only', 55.00, 'Featured', 'images/products/chili_dunk.jpg', 1),
+('McCafé Sea Salt Caramel Iced Coffee Medium', 'New Item', 83.00, 'Featured', 'images/products/seasalt_caramel.jpg', 1),
+('McCafé Cereal Milk Iced Latte', 'New Item', 130.00, 'Featured', 'images/products/cereal_latte.jpg', 1),
+('Twister Fries Sharing', 'Limited time only', 199.00, 'Featured', 'images/products/twister_sharing.jpg', 1),
+('Twister Fries N\' Royal McFloat Combo', 'Limited time only', 135.00, 'Featured', 'images/products/twister_combo.jpg', 1),
+('Cheeseburger with Twister Fries and Royal McFloat Medium Meal', 'Limited time only', 175.00, 'Featured', 'images/products/cheeseburger_twister_meal.jpg', 1);
