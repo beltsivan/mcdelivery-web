@@ -5,6 +5,7 @@
     <title>McDelivery Imitation</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/banner.css">
+    <link rel="stylesheet" href="css/menu.css">
     <link href="https://fonts.googleapis.com/css2?family=Speedee:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
