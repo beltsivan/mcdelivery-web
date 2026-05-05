@@ -17,7 +17,7 @@
 
 .sub-nav-wrapper {
     position: sticky;
-    top: 90px;
+    top: 65px;
     /* Matches header height so it sits right under it */
     background-color: #fff;
     z-index: 999;

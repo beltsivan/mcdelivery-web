@@ -1,0 +1,57 @@
+.main-footer {
+    background-color: #f8f8f8; /* Light gray background from your image */
+    padding: 60px 0;
+    border-top: 1px solid #e0e0e0;
+    margin-top: 50px;
+}
+
+.footer-flex {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.footer-logo img {
+    width: 110px; /* Adjust size to match the screenshot */
+    height: auto;
+}
+
+.footer-links ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.footer-links ul li {
+    margin-bottom: 15px;
+}
+
+.footer-links ul li a {
+    text-decoration: none;
+    color: #292929;
+    font-size: 14px;
+    transition: color 0.2s;
+}
+
+.footer-links ul li a:hover {
+    color: #DB0007; /* McDonald's Red on hover */
+}
+
+.footer-social p {
+    color: #DB0007; /* Red text for the call to action */
+    font-weight: bold;
+    font-size: 14px;
+    margin-bottom: 15px;
+    text-align: right;
+}
+
+.social-icons {
+    display: flex;
+    gap: 15px;
+    justify-content: flex-end;
+}
+
+.social-icons img {
+    width: 24px;
+    height: 24px;
+}

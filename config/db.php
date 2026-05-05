@@ -1,8 +1,8 @@
 <?php
 $host = "localhost";
 $user = "root";
-$pass = "121522";
-$dbname = "mcdelivery";
+$pass = "";
+$dbname = "mcd_db";
 
 $conn = mysqli_connect($host, $user, $pass, $dbname);
 

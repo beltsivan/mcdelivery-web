@@ -102,10 +102,10 @@ nav img[alt="bag"] {
 }
 
 .card {
-    background: #fff;
+    background: #ffffff;
     border-radius: 15px;
     padding: 15px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 4px 15px rgba(212, 16, 16, 0.08);
     transition: 0.3s;
     display: flex;
     flex-direction: column;

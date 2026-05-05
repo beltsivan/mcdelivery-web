@@ -155,6 +155,38 @@ if ($hour >= 5 && $hour < 11) {
     ?>
     </div>
 </div>
+
+<div class="featured-section main-container">
+    <h2>Featured</h2>
+    <p class="subtext">Discover your new favorites here!</p>
+    
+    <div class="product-grid">
+    <?php
+// Added 'LIMIT 4' to the end of the query
+$featured_query = "SELECT * FROM McdoMenuItem 
+                   WHERE Menu_Category = 'Featured' 
+                   AND Menu_Available = 1 
+                   LIMIT 5"; 
+$featured_result = mysqli_query($conn, $featured_query);
+
+if (mysqli_num_rows($featured_result) > 0) {
+    while($row = mysqli_fetch_assoc($featured_result)) {
+        ?>
+        <div class="card">
+            <div class="card-image">
+                <img src="<?php echo $row['Menu_ImageURL']; ?>" alt="Featured Item">
+            </div>
+            <div class="card-info">
+                <h3><?php echo $row['Menu_Name']; ?></h3>
+                <p class="Menu_Price">₱<?php echo number_format($row['Menu_Price'], 2); ?></p>
+            </div>
+        </div>
+        <?php
+    }
+}
+?>
+    </div>
+</div>
 </main>
 
 <?php include('includes/footer.php'); ?>
