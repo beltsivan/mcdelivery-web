@@ -54,7 +54,7 @@ $result = mysqli_query($conn, $query);
             ?>
             <div class="card">
                 <div class="card-image">
-                    <img src="<?php echo $row['Menu_ImageURL']; ?>" alt="Menu Item">
+                    <img src="uploads/<?php echo $row['Menu_ImageURL']; ?>" alt="Menu Item">
                 </div>
                 <div class="card-info">
                     <h3><?php echo $row['Menu_Name']; ?></h3>

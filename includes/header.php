@@ -74,7 +74,17 @@ if (session_status() === PHP_SESSION_NONE) {
             <h2>Welcome back!</h2>
             <p>Sign in to your account.</p>
         </div>
-
+<?php 
+    // Ensure session is started
+    if (isset($_SESSION['error'])): 
+    ?>
+        <div class="ui-error-msg">
+            <?php 
+                echo $_SESSION['error']; 
+                unset($_SESSION['error']); // Remove it so it won't show after refresh
+            ?>
+        </div>
+    <?php endif; ?>
         <form action="login.php" method="POST">
             <input type="email" name="email" placeholder="Email" required>
             <input type="password" name="password" placeholder="Password" required>

@@ -75,47 +75,47 @@ if ($hour >= 5 && $hour < 11) {
         <div class="scroll-container">
             <button class="scroll-btn left" onclick="scrollGrid(-1)">&#10094;</button>
                 <div class="category-grid" id="categoryGrid">
-                    <a href="category.php?id=featured" class="cat-item">
+                    <a href="menu.php?category=Featured" class="cat-item">
                         <img src="images/menu/featured.jpg" alt="Featured">
                         <span>Featured</span>
                     </a>
-                    <a href="category.php?id=group" class="cat-item">
+                    <a href="menu.php?category=Group Meals" class="cat-item">
                         <img src="images/menu/groupmeals.png" alt="Group Meals">
                         <span>Group Meals</span>
                     </a>
-                    <a href="category.php?id=chicken" class="cat-item">
+                    <a href="menu.php?category=Chicken" class="cat-item">
                         <img src="images/menu/chickenfish.png" alt="Chicken & Fish">
                         <span>Chicken & Fish</span>
                     </a>
-                    <a href="category.php?id=burgers" class="cat-item">
+                    <a href="menu.php?category=Burgers" class="cat-item">
                         <img src="images/menu/burgers.png" alt="Burgers">
                         <span>Burgers</span>
                     </a>
-                    <a href="category.php?id=spaghetti" class="cat-item">
+                    <a href="menu.php?category=McSpaghetti" class="cat-item">
                         <img src="images/menu/spag.png" alt="McSpaghetti">
                         <span>McSpaghetti</span>
                     </a>
-                    <a href="category.php?id=ricebowl" class="cat-item">
+                    <a href="menu.php?category=Rice Bowl" class="cat-item">
                         <img src="images/menu/ricebowl.png" alt="Rice Bowl">
                         <span>Rice Bowl</span>
                     </a>
-                    <a href="category.php?id=dessertsdrinks" class="cat-item">
+                    <a href="menu.php?category=Desserts%20%26%20Drinks" class="cat-item">
                         <img src="images/menu/dessertsdrinks.png" alt="Desserts & Drinks">
                         <span>Desserts & Drinks</span>
                     </a>
-                    <a href="category.php?id=mccafe" class="cat-item">
+                    <a href="menu.php?category=McCafe" class="cat-item">
                         <img src="images/menu/mccafe.png" alt="Mc Cafe">
                         <span>Mc Cafe</span>
                     </a>
-                    <a href="category.php?id=friesextra" class="cat-item">
+                    <a href="menu.php?category=Fries%20%26%20Extras" class="cat-item">
                         <img src="images/menu/friesextra.png" alt="Fries">
                         <span>Fries</span>
                     </a>
-                    <a href="category.php?id=happymeals" class="cat-item">
+                    <a href="menu.php?category=Happy Meal" class="cat-item">
                         <img src="images/menu/happymeal.png" alt="Happy Meal">
                         <span>Happy Meal</span>
                     </a>
-                    <a href="category.php?id=sulitmeals" class="cat-item">
+                    <a href="menu.php?category=Sulit Busog Meals" class="cat-item">
                         <img src="images/menu/sulitmeals.png" alt="Sulit Meals">
                         <span>Sulit-Busog Meals</span>
                     </a>

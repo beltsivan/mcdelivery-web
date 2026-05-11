@@ -68,3 +68,29 @@
 .close-btn { position: absolute; top: 20px; right: 20px; font-size: 24px; cursor: pointer; }
 
 
+
+.error-banner {
+    background-color: #ffebee; /* Light red background */
+    color: #c62828;            /* Dark red text */
+    padding: 12px;
+    border-radius: 8px;
+    border-left: 5px solid #d32f2f; /* Thick red accent on the left */
+    margin-bottom: 20px;
+    font-size: 14px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    animation: shake 0.4s ease-in-out; /* Adds a "wrong" shake effect */
+}
+
+.error-banner .icon {
+    margin-right: 10px;
+    font-size: 18px;
+}
+
+/* Optional: Shake animation to draw attention */
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}

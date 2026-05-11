@@ -31,7 +31,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
     
     // If there's an error, send them back to index with a message
-    header("Location: index.php?login_error=" . urlencode($error));
-    exit();
+    // If password_verify fails OR email is not found:
+    $_SESSION['error'] = "Wrong email or password"; // Store in session
+    header("Location: index.php"); // URL stays clean!
+    
 }
+
 ?>
