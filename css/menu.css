@@ -1,19 +1,15 @@
 .menu-grid {
-    display: grid;
-    /* Use 'repeat(auto-fill)' to keep cards tidy */
-    grid-template-columns: repeat(4, 1fr);
-    gap: 15px;
-    /* Tighten the gap between cards */
+    display: flex;
+    flex-wrap: wrap;
+    gap: 22px;
+    justify-content: center !important;
+    align-items: stretch;
+    width: 100%;
+    max-width: 1030px;
+    margin: 0 auto;
 }
 
-.bag-header {
-    padding: 15px 20px;
-    border-bottom: 1px solid #f2f2f2;
-    display: flex;
-    justify-content: space-between;
-    font-size: 13px;
-    color: #292929;
-}
+
 
 .sub-nav-wrapper {
     position: sticky;
@@ -34,12 +30,14 @@
 .order-btn {
     background-color: #FFBC0D;
     border: none;
+    display: block;
+    box-sizing: border-box;
     padding: 10px;
     width: 100%;
     border-radius: 20px;
     font-weight: bold;
     cursor: pointer;
-    margin-top: 10px;
+    margin-top: auto;
 }
 
 .sub-nav a {
@@ -85,91 +83,39 @@
 
 
 
-.bag-content h2 {
-    font-size: 32px;
-    /* Large heading */
-    font-weight: 700;
-    margin-top: 30px;
-    margin-bottom: 20px;
-    color: #292929;
-}
 
-.bag-content p {
-    font-size: 16px;
-    color: #757575;
-    line-height: 1.5;
-}
 
-.total-row {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 8px;
-    font-size: 14px;
-}
 
-.total-row.grand-total {
-    font-weight: bold;
-    font-size: 16px;
-    margin-top: 10px;
-}
 
-.checkout-btn {
-    width: 100%;
-    padding: 18px;
-    /* Thicker button */
-    font-size: 16px;
-    background-color: #dcdcdc;
-    /* Light gray for empty state */
-    color: #999;
-    border-radius: 30px;
-    /* Fully rounded pill shape */
-    border: none;
-    font-weight: bold;
-}
+
 
 /* The parent that allows the sidebar to hit the edge */
 .menu-page-wrapper {
-    display: flex;
-    align-items: flex-start;
+    display: block;
     width: 100%;
-    gap: 190px;
+    margin: 0 auto;
 }
 
 /* Left side: menu content fills available space */
 .menu-content-container {
-    flex: 1;
-    /* Remove 'justify-content: center' if you have it here */
+    box-sizing: border-box;
+    margin: 0 auto;
+    padding: 40px 24px;
+    width: 100%;
     display: flex;
-    justify-content: flex-end;
-    /* This pushes the food cards TOWARD the sidebar */
-    padding: 40px 20px;
+    justify-content: center;
 }
 
 .product-section {
     width: 100%;
-    /* Adjust this max-width to control how far the grid spreads */
-    max-width: 950px;
+    max-width: 1030px;
+    margin: 0 auto;
+    display: block;
 }
 
-/* THE SIDEBAR FIX - sticks to the right side of food cards */
-.cart-sidebar {
-    width: 420px;
-    flex-shrink: 0;
-    /* Prevents it from shrinking */
-    position: sticky;
-    top: 120px;
-    /* Adjust based on your header+nav height */
-    height: calc(100vh - 120px);
-    background: #fff;
-    border-left: 1px solid #e0e0e0;
-}
 
-.bag-container {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    /* Makes it full height */
-}
+
+
 
 .bag-content {
     flex-grow: 1;
@@ -179,11 +125,7 @@
 }
 
 /* This stays at the absolute bottom of the sidebar */
-.bag-footer {
-    padding: 30px;
-    border-top: 1px solid #eee;
-    background: #fff;
-}
+
 
 
 
@@ -233,4 +175,64 @@
     font-weight: bold;
     font-size: 18px;
     margin-bottom: 15px;
+}
+
+.card-link {
+    color: inherit;
+    display: flex;
+    height: 360px;
+    text-decoration: none;
+    flex: 0 0 230px;
+    width: 230px;
+}
+
+.card-link .card {
+    height: 100%;
+    width: 100%;
+}
+
+.menu-grid .card {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    height: 360px;
+    padding: 18px;
+    text-align: center;
+    width: 230px;
+}
+
+.menu-grid .card-image {
+    align-items: center;
+    display: flex;
+    flex: 0 0 150px;
+    height: 150px;
+    justify-content: center;
+}
+
+.menu-grid .card-image img {
+    height: 145px;
+    max-height: 145px;
+    max-width: 100%;
+    object-fit: contain;
+    width: 100%;
+}
+
+.menu-grid .card-info {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 155px;
+}
+
+.menu-grid .card h3 {
+    align-items: center;
+    display: flex;
+    justify-content: center;
+    height: 52px;
+    margin: 10px 0;
+    overflow: hidden;
+}
+
+.menu-grid .Menu_Price {
+    margin: 0 0 14px;
 }

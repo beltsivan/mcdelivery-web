@@ -7,16 +7,18 @@ include('includes/header.php');
 // 2. Logic to determine Greeting and Category
 $hour = date('H'); // Gets hour from 00 to 23
 
+$fname = isset($_SESSION['Cust_FName']) ? $_SESSION['Cust_FName'] : "Guest";
+
 if ($hour >= 5 && $hour < 11) {
-    $greeting = "Good Morning!";
+    $greeting = "Good Morning, " . $fname . "!";
     $subtext = "Say hooray with these breakfast treats!";
     $category = "Breakfast";
 } else if ($hour >= 11 && $hour < 17) {
-    $greeting = "Good Afternoon!";
+    $greeting = "Good Afternoon, " . $fname . "!";
     $subtext = "Enjoy your favorite lunch meals!";
-    $category = "Dinner Specials"; 
+    $category = "Dinner Specials";
 } else {
-    $greeting = "Good Evening!";
+    $greeting = "Good Evening, " . $fname . "!";
     $subtext = "Treat yourself with these dinner specials!";
     $category = "Dinner Specials";
 }
@@ -49,7 +51,8 @@ if ($hour >= 5 && $hour < 11) {
         if (mysqli_num_rows($result) > 0) {
             while($row = mysqli_fetch_assoc($result)) {
                 ?>
-                <div class="card">
+                <a href="productdetails.php?id=<?php echo $row['Menu_MenuItemId']; ?>">
+                    <div class="card">
                     <div class="card-image">
                         <img src="<?php echo $row['Menu_ImageURL']; ?>" alt="Product">
                     </div>
@@ -58,6 +61,9 @@ if ($hour >= 5 && $hour < 11) {
                         <p class="Menu_Price">₱<?php echo number_format($row['Menu_Price'], 2); ?></p>
                     </div>
                 </div>
+                
+                </a>
+                
                 <?php
             } 
         } else {
@@ -73,47 +79,47 @@ if ($hour >= 5 && $hour < 11) {
         <div class="scroll-container">
             <button class="scroll-btn left" onclick="scrollGrid(-1)">&#10094;</button>
                 <div class="category-grid" id="categoryGrid">
-                    <a href="category.php?id=featured" class="cat-item">
+                    <a href="menu.php?category=Featured" class="cat-item">
                         <img src="images/menu/featured.jpg" alt="Featured">
                         <span>Featured</span>
                     </a>
-                    <a href="category.php?id=group" class="cat-item">
+                    <a href="menu.php?category=Group Meals" class="cat-item">
                         <img src="images/menu/groupmeals.png" alt="Group Meals">
                         <span>Group Meals</span>
                     </a>
-                    <a href="category.php?id=chicken" class="cat-item">
+                    <a href="menu.php?category=Chicken" class="cat-item">
                         <img src="images/menu/chickenfish.png" alt="Chicken & Fish">
                         <span>Chicken & Fish</span>
                     </a>
-                    <a href="category.php?id=burgers" class="cat-item">
+                    <a href="menu.php?category=Burgers" class="cat-item">
                         <img src="images/menu/burgers.png" alt="Burgers">
                         <span>Burgers</span>
                     </a>
-                    <a href="category.php?id=spaghetti" class="cat-item">
+                    <a href="menu.php?category=McSpaghetti" class="cat-item">
                         <img src="images/menu/spag.png" alt="McSpaghetti">
                         <span>McSpaghetti</span>
                     </a>
-                    <a href="category.php?id=ricebowl" class="cat-item">
+                    <a href="menu.php?category=Rice Bowl" class="cat-item">
                         <img src="images/menu/ricebowl.png" alt="Rice Bowl">
                         <span>Rice Bowl</span>
                     </a>
-                    <a href="category.php?id=dessertsdrinks" class="cat-item">
+                    <a href="menu.php?category=Desserts%20%26%20Drinks" class="cat-item">
                         <img src="images/menu/dessertsdrinks.png" alt="Desserts & Drinks">
                         <span>Desserts & Drinks</span>
                     </a>
-                    <a href="category.php?id=mccafe" class="cat-item">
+                    <a href="menu.php?category=McCafe" class="cat-item">
                         <img src="images/menu/mccafe.png" alt="Mc Cafe">
                         <span>Mc Cafe</span>
                     </a>
-                    <a href="category.php?id=friesextra" class="cat-item">
+                    <a href="menu.php?category=Fries%20%26%20Extras" class="cat-item">
                         <img src="images/menu/friesextra.png" alt="Fries">
                         <span>Fries</span>
                     </a>
-                    <a href="category.php?id=happymeals" class="cat-item">
+                    <a href="menu.php?category=Happy Meal" class="cat-item">
                         <img src="images/menu/happymeal.png" alt="Happy Meal">
                         <span>Happy Meal</span>
                     </a>
-                    <a href="category.php?id=sulitmeals" class="cat-item">
+                    <a href="menu.php?category=Sulit Busog Meals" class="cat-item">
                         <img src="images/menu/sulitmeals.png" alt="Sulit Meals">
                         <span>Sulit-Busog Meals</span>
                     </a>
@@ -140,6 +146,7 @@ if ($hour >= 5 && $hour < 11) {
         while($row = mysqli_fetch_assoc($exclusive_result)) {
             // Reusing your exact same card structure again!
             ?>
+        <a href="productdetails.php?id=<?php echo $row['Menu_MenuItemId']; ?>">
             <div class="card">
                 <div class="card-image">
                     <img src="<?php echo $row['Menu_ImageURL']; ?>" alt="Exclusive Product">
@@ -149,6 +156,8 @@ if ($hour >= 5 && $hour < 11) {
                     <p class="Menu_Price">₱<?php echo number_format($row['Menu_Price'], 2); ?></p>
                 </div>
             </div>
+        </a>
+            
             <?php
         }
     } else { echo "<p>No exclusive items found.</p>"; }
@@ -172,7 +181,8 @@ $featured_result = mysqli_query($conn, $featured_query);
 if (mysqli_num_rows($featured_result) > 0) {
     while($row = mysqli_fetch_assoc($featured_result)) {
         ?>
-        <div class="card">
+        <a href="productdetails.php?id=<?php echo $row['Menu_MenuItemId']; ?>">
+            <div class="card">
             <div class="card-image">
                 <img src="<?php echo $row['Menu_ImageURL']; ?>" alt="Featured Item">
             </div>
@@ -181,13 +191,15 @@ if (mysqli_num_rows($featured_result) > 0) {
                 <p class="Menu_Price">₱<?php echo number_format($row['Menu_Price'], 2); ?></p>
             </div>
         </div>
+        </a>
+        
         <?php
     }
 }
 ?>
     </div>
 </div>
+<script src="js/slider.js?v=<?php echo time(); ?>"></script>
 </main>
 
 <?php include('includes/footer.php'); ?>
-<script src="js/slider.js?v=<?php echo time(); ?>"></script>
