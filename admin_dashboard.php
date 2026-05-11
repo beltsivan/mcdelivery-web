@@ -49,6 +49,23 @@ if (isset($_POST['update_product'])) {
     if ($stmt->execute()) { $msg = "Item updated successfully!"; }
 }
 
+
+
+// 2. The Delete Logic
+if (isset($_GET['delete_id'])) {
+    $id = $_GET['delete_id'];
+    
+    $sql = "DELETE FROM mcdomenuitem WHERE Menu_MenuItemId = ?";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("i", $id);
+
+    if ($stmt->execute()) {
+        // Redirect back to the same page but without the delete_id in the URL
+        header("Location: admin_dashboard.php?page=products&status=deleted");
+        exit();
+    }
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="en">

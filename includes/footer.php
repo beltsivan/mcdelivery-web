@@ -1,3 +1,32 @@
+<?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+require_once(__DIR__ . '/cart.php');
+
+if (isset($_SESSION['Cust_Id']) && !isset($conn)) {
+    require_once(__DIR__ . '/../config/db.php');
+}
+
+$bagItems = [];
+
+if (isset($_SESSION['Cust_Id']) && isset($conn)) {
+    $bagItems = mcd_get_customer_bag_items($conn, (int) $_SESSION['Cust_Id']);
+} else {
+    $bagItems = mcd_get_guest_bag_items();
+    unset($_SESSION['guest_bag_flash']);
+}
+
+$bagTotal = 0;
+
+foreach ($bagItems as $bagItem) {
+    $bagTotal += isset($bagItem['total']) ? (float) $bagItem['total'] : ((float) $bagItem['price']) * ((int) $bagItem['quantity']);
+}
+
+$deliveryFee = !empty($bagItems) ? 49 : 0;
+$grandTotal = $bagTotal + $deliveryFee;
+?>
 <footer class="main-footer">
     <div class="main-container footer-flex">
         <div class="footer-logo">
@@ -31,5 +60,175 @@
         </div>
     </div>
 </footer>
+<div id="sideBag" class="side-bag">
+    <div class="bag-header">
+        <h3>My Bag</h3>
+        <span class="close-bag" onclick="toggleBag()">&times;</span>
+    </div>
+    <style>
+        /* The Sidebar */
+.side-bag {
+    position: fixed;
+    /* Change this to match your header's height */
+    top: 80px; 
+    
+    right: -400px;
+    width: 400px;
+    
+    /* Calculate height: 100% of viewport minus the header height */
+    height: calc(100vh - 80px); 
+    
+    background-color: white;
+    z-index: 999; /* Slightly lower than header if header is 1000 */
+    box-shadow: -5px 5px 15px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: column;
+    transition: right 0.3s ease-in-out;
+}
+
+/* Slide in state */
+.side-bag.open {
+    right: 0;
+}
+
+/* Header/Footer Styling */
+.bag-header { padding: 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; }
+.bag-content { flex: 1; overflow-y: auto; padding: 20px; }
+.bag-footer { padding: 20px; background: #fff; border-top: 1px solid #eee; }
+
+.checkout-btn {
+    width: 100%;
+    background: #ffbc0d; /* McDonald's Yellow */
+    border: none;
+    padding: 15px;
+    border-radius: 10px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.bag-item {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.bag-item img {
+    width: 70px;
+    height: 70px;
+    object-fit: contain;
+    border-radius: 10px;
+    background: #f8f8f8;
+}
+
+.item-details {
+    flex: 1;
+}
+
+.item-details p {
+    margin: 0 0 6px;
+    font-weight: bold;
+    color: #292929;
+}
+
+.item-details span {
+    color: #555;
+    font-size: 14px;
+}
+
+.total {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    font-weight: bold;
+}
+
+.total.grand-total {
+    border-top: 1px solid #eee;
+    margin-top: 12px;
+    padding-top: 12px;
+}
+
+.empty-bag-message {
+    margin-top: 35px;
+    color: #777;
+    text-align: center;
+}
+
+</style>
+    <div class="bag-content">
+        <?php if (!empty($bagItems)): ?>
+            <?php foreach ($bagItems as $bagItem): ?>
+                <?php
+                $imagePath = mcd_normalize_image_path($bagItem['image']);
+                $lineTotal = isset($bagItem['total']) ? (float) $bagItem['total'] : ((float) $bagItem['price']) * ((int) $bagItem['quantity']);
+                ?>
+                <div class="bag-item">
+                    <img src="<?php echo htmlspecialchars($imagePath); ?>" alt="<?php echo htmlspecialchars($bagItem['name']); ?>">
+                    <div class="item-details">
+                        <p><?php echo htmlspecialchars($bagItem['name']); ?></p>
+                        <span><?php echo (int) $bagItem['quantity']; ?> x ₱<?php echo number_format($bagItem['price'], 2); ?></span>
+                    </div>
+                    <strong>₱<?php echo number_format($lineTotal, 2); ?></strong>
+                </div>
+            <?php endforeach; ?>
+        <?php else: ?>
+            <p class="empty-bag-message">Your bag is empty. Add something from the menu.</p>
+        <?php endif; ?>
+    </div>
+
+    <div class="bag-footer">
+        <div class="total">
+            <span>Subtotal</span>
+            <span>₱<?php echo number_format($bagTotal, 2); ?></span>
+        </div>
+        <div class="total">
+            <span>Delivery fee</span>
+            <span>₱<?php echo number_format($deliveryFee, 2); ?></span>
+        </div>
+        <div class="total grand-total">
+            <span>Total</span>
+            <span>₱<?php echo number_format($grandTotal, 2); ?></span>
+        </div>
+        <button class="checkout-btn" <?php echo empty($bagItems) ? 'disabled' : ''; ?>>Proceed to Checkout</button>
+    </div>
+</div>
+
+
+<script>
+function setBagOpen(open) {
+    const sideBag = document.getElementById('sideBag');
+    const bagOverlay = document.getElementById('bagOverlay');
+
+    if (!sideBag) {
+        return;
+    }
+
+    sideBag.classList.toggle('open', open);
+
+    if (bagOverlay) {
+        bagOverlay.classList.toggle('active', open);
+    }
+}
+
+function toggleBag() {
+    const sideBag = document.getElementById('sideBag');
+
+    if (!sideBag) {
+        return;
+    }
+
+    setBagOpen(!sideBag.classList.contains('open'));
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const params = new URLSearchParams(window.location.search);
+
+    if (params.get('bag') === '1') {
+        setBagOpen(true);
+    }
+});
+</script>
 </body>
 </html>

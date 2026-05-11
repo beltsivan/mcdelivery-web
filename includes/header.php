@@ -2,6 +2,17 @@
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
+
+require_once(__DIR__ . '/../config/db.php');
+require_once(__DIR__ . '/cart.php');
+
+$bagCount = 0;
+
+if (isset($_SESSION['Cust_Id'])) {
+    $bagCount = mcd_get_customer_bag_count($conn, (int) $_SESSION['Cust_Id']);
+} else {
+    $bagCount = mcd_get_guest_bag_count();
+}
 ?>
 
 <!DOCTYPE html>
@@ -12,7 +23,7 @@ if (session_status() === PHP_SESSION_NONE) {
     <title>McDelivery Imitation</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/banner.css">
-    <link rel="stylesheet" href="css/menu.css">
+    <link rel="stylesheet" href="css/menu.css?v=<?php echo filemtime(__DIR__ . '/../css/menu.css'); ?>">
     <link rel="stylesheet" href="css/footer.css">
     <link rel="stylesheet" href="css/login.css">
     <link rel="stylesheet" href="css/register.css">
@@ -60,7 +71,10 @@ if (session_status() === PHP_SESSION_NONE) {
                 <a href="javascript:void(0)" onclick="showLogin()" class="login-btn">Log In</a>
             <?php endif; ?>
 
-            <img src="images/bag.jpg" alt="bag" class="cart-icon">
+            <a href="javascript:void(0)" onclick="toggleBag()">
+            <img src="images/bag.jpg" alt="My Bag" style="width: 30px;">
+            <span class="bag-count"><?php echo $bagCount; ?></span>
+        </a>
         </nav>
     </div>
 </header>
@@ -103,7 +117,3 @@ if (session_status() === PHP_SESSION_NONE) {
         </p>
     </div>
 </div>
-</body>
-<script>
-    
-</script>

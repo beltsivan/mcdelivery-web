@@ -56,9 +56,11 @@
                         <button class="btn-edit" onclick="openEditModal(<?php echo htmlspecialchars(json_encode($row)); ?>)">
                         Edit
                     </button>
-                        <a href="admin_delete_product.php?id=<?php echo $row['Menu_MenuItemId']; ?>" 
-                           class="btn-delete" 
-                           onclick="return confirm('Are you sure you want to delete this item?')">Delete</a>
+                        <a href="admin_dashboard.php?page=products&delete_id=<?php echo $row['Menu_MenuItemId']; ?>" 
+   onclick="return confirm('Are you sure you want to delete this item?');" 
+   class="btn-delete">
+   Delete
+</a>
                     </td>
                 </tr>
                 <?php endwhile; ?>

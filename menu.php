@@ -1,5 +1,6 @@
 <?php include('includes/header.php'); 
 include('config/db.php'); 
+require_once('includes/cart.php');
 
 $category_map = [
     'Featured'          => "Menu_Category = 'Featured'",
@@ -23,6 +24,13 @@ $sql_filter = isset($category_map[$nav_cat]) ? $category_map[$nav_cat] : "Menu_C
 $query = "SELECT * FROM McdoMenuItem WHERE $sql_filter AND Menu_Available = 1";
 
 $result = mysqli_query($conn, $query);
+
+$menuBagItems = isset($_SESSION['Cust_Id']) ? mcd_get_customer_bag_items($conn, (int) $_SESSION['Cust_Id']) : mcd_get_guest_bag_items();
+$menuBagTotal = 0;
+
+foreach ($menuBagItems as $menuBagItem) {
+    $menuBagTotal += isset($menuBagItem['total']) ? (float) $menuBagItem['total'] : ((float) $menuBagItem['price']) * ((int) $menuBagItem['quantity']);
+}
 ?>
 
 
@@ -52,16 +60,18 @@ $result = mysqli_query($conn, $query);
     if ($result && mysqli_num_rows($result) > 0) {
         while($row = mysqli_fetch_assoc($result)) {
             ?>
-            <div class="card">
-                <div class="card-image">
-                    <img src="uploads/<?php echo $row['Menu_ImageURL']; ?>" alt="Menu Item">
+            <a class="card-link" href="productdetails.php?id=<?php echo $row['Menu_MenuItemId']; ?>">
+                <div class="card">
+                    <div class="card-image">
+                        <img src="uploads/<?php echo htmlspecialchars($row['Menu_ImageURL']); ?>" alt="<?php echo htmlspecialchars($row['Menu_Name']); ?>">
+                    </div>
+                    <div class="card-info">
+                        <h3><?php echo htmlspecialchars($row['Menu_Name']); ?></h3>
+                        <p class="Menu_Price">₱<?php echo number_format($row['Menu_Price'], 2); ?></p>
+                        <span class="order-btn">View Details</span>
+                    </div>
                 </div>
-                <div class="card-info">
-                    <h3><?php echo $row['Menu_Name']; ?></h3>
-                    <p class="Menu_Price">₱<?php echo number_format($row['Menu_Price'], 2); ?></p>
-                    <button class="order-btn">Order</button>
-                </div>
-            </div>
+            </a>
             <?php
         }
     } else {
@@ -71,33 +81,6 @@ $result = mysqli_query($conn, $query);
 </div>
         </main>
     </div>
-
-    <aside class="cart-sidebar">
-        <div class="bag-container">
-            <div class="bag-header">
-                <div class="delivery-info">
-                    <img src="images/icons/rider-icon.png" alt="" style="width:20px;"> 
-                    <span>Deliver (Now)</span>
-                </div>
-                <a href="#" class="change-link">Change</a>
-            </div>
-            
-            <div class="bag-content">
-                <h2>My Bag</h2>
-                <div class="empty-state">
-                    <img src="images/icons/empty-bag.png" alt="Empty Bag">
-                    <p>Your bag is empty. Add something from the menu.</p>
-                </div>
-            </div>
-            
-            <div class="bag-footer">
-                <div class="total-row"><span>Subtotal</span> <span>₱ 0.00</span></div>
-                <div class="total-row"><span>Delivery fee</span> <span>₱ 49.00</span></div>
-                <div class="total-row grand-total"><span>Total</span> <span>₱ 0.00</span></div>
-                <button class="checkout-btn" disabled>Proceed to Checkout</button>
-            </div>
-        </div>
-    </aside>
 </div>
 
 <?php include('includes/footer.php'); ?>

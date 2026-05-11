@@ -51,7 +51,8 @@ if ($hour >= 5 && $hour < 11) {
         if (mysqli_num_rows($result) > 0) {
             while($row = mysqli_fetch_assoc($result)) {
                 ?>
-                <div class="card">
+                <a href="productdetails.php?id=<?php echo $row['Menu_MenuItemId']; ?>">
+                    <div class="card">
                     <div class="card-image">
                         <img src="<?php echo $row['Menu_ImageURL']; ?>" alt="Product">
                     </div>
@@ -60,6 +61,9 @@ if ($hour >= 5 && $hour < 11) {
                         <p class="Menu_Price">₱<?php echo number_format($row['Menu_Price'], 2); ?></p>
                     </div>
                 </div>
+                
+                </a>
+                
                 <?php
             } 
         } else {
@@ -142,6 +146,7 @@ if ($hour >= 5 && $hour < 11) {
         while($row = mysqli_fetch_assoc($exclusive_result)) {
             // Reusing your exact same card structure again!
             ?>
+        <a href="productdetails.php?id=<?php echo $row['Menu_MenuItemId']; ?>">
             <div class="card">
                 <div class="card-image">
                     <img src="<?php echo $row['Menu_ImageURL']; ?>" alt="Exclusive Product">
@@ -151,6 +156,8 @@ if ($hour >= 5 && $hour < 11) {
                     <p class="Menu_Price">₱<?php echo number_format($row['Menu_Price'], 2); ?></p>
                 </div>
             </div>
+        </a>
+            
             <?php
         }
     } else { echo "<p>No exclusive items found.</p>"; }
@@ -174,7 +181,8 @@ $featured_result = mysqli_query($conn, $featured_query);
 if (mysqli_num_rows($featured_result) > 0) {
     while($row = mysqli_fetch_assoc($featured_result)) {
         ?>
-        <div class="card">
+        <a href="productdetails.php?id=<?php echo $row['Menu_MenuItemId']; ?>">
+            <div class="card">
             <div class="card-image">
                 <img src="<?php echo $row['Menu_ImageURL']; ?>" alt="Featured Item">
             </div>
@@ -183,6 +191,8 @@ if (mysqli_num_rows($featured_result) > 0) {
                 <p class="Menu_Price">₱<?php echo number_format($row['Menu_Price'], 2); ?></p>
             </div>
         </div>
+        </a>
+        
         <?php
     }
 }
