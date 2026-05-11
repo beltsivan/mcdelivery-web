@@ -1,0 +1,46 @@
+/* Dropdown Container  */
+.account-dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+/* The "My Account" button */
+.dropbtn {
+    background: none;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+    text-decoration: none;
+    color: #292929;
+    font-weight: 900;
+    font-size: 14px;
+}
+
+/* Hidden Dropdown Menu */
+.dropdown-content {
+    display: none;
+    position: absolute;
+    right: 0;
+    background-color: white;
+    min-width: 180px;
+    box-shadow: 0px 8px 16px rgba(0,0,0,0.1);
+    z-index: 1;
+    border: 1px solid #eee;
+}
+
+/* Links inside the dropdown */
+.dropdown-content a {
+    color: black;
+    padding: 12px 16px;
+    text-decoration: none;
+    display: block;
+    font-size: 14px;
+    border-bottom: 1px solid #f1f1f1;
+}
+
+.dropdown-content a:hover { background-color: #f9f9f9; }
+
+/* Show the menu on hover */
+.account-dropdown:hover .dropdown-content {
+    display: block;
+}

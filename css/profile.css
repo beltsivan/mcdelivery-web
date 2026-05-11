@@ -1,0 +1,32 @@
+.profile-wrapper { display: flex; max-width: 1100px; margin: 40px auto; gap: 30px; font-family: 'Speedee', sans-serif; }
+        
+        /* Sidebar Styling */
+        .profile-sidebar { width: 250px; }
+        .profile-sidebar h3 { font-size: 18px; margin-bottom: 20px; }
+        .sidebar-menu { list-style: none; padding: 0; }
+        .sidebar-menu li a { 
+            text-decoration: none; color: #333; display: block; padding: 10px 15px; 
+            border-radius: 8px; margin-bottom: 5px; font-size: 14px;
+        }
+        .sidebar-menu li a.active { background: #FFBC0D; font-weight: bold; }
+        .sidebar-menu li a:hover:not(.active) { background: #f5f5f5; }
+
+        /* Main Form Styling */
+        .profile-main { flex: 1; }
+        .profile-card { background: white; padding: 40px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .profile-card h2 { margin-top: 0; margin-bottom: 30px; }
+        
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; font-size: 12px; color: #888; margin-bottom: 5px; }
+        .form-group input { 
+            width: 100%; padding: 12px; border: 1px solid #eee; border-radius: 8px; 
+            background: #f9f9f9; color: #333; font-size: 15px; box-sizing: border-box;
+        }
+        .btn-save { 
+            width: 100%; padding: 15px; background: #e2e2e2; color: #999; 
+            border: none; border-radius: 30px; font-weight: bold; cursor: not-allowed; margin-top: 20px;
+        }
+        .change-pass { 
+            display: block; text-align: center; margin-top: 20px; 
+            color: #FFBC0D; font-weight: bold; text-decoration: none; font-size: 14px; text-transform: uppercase;
+        }

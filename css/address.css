@@ -1,0 +1,15 @@
+.profile-wrapper { display: flex; max-width: 1100px; margin: 40px auto; gap: 30px; font-family: 'Speedee', sans-serif; }
+        .profile-sidebar { width: 250px; }
+        .sidebar-menu { list-style: none; padding: 0; }
+        .sidebar-menu li a { text-decoration: none; color: #333; display: block; padding: 10px 15px; border-radius: 8px; margin-bottom: 5px; font-size: 14px; }
+        .sidebar-menu li a.active { background: #FFBC0D; font-weight: bold; }
+        
+        .profile-main { flex: 1; }
+        .address-card { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; position: relative; min-height: 35vh; }
+        
+        .add-btn-container { text-align: right; margin-bottom: 20px; }
+        .btn-add { background: #FFBC0D; color: black; border: none; padding: 10px 25px; border-radius: 20px; font-weight: bold; cursor: pointer; }
+        
+        .address-details p { margin: 5px 0; color: #555; }
+        .address-tag { font-weight: bold; font-size: 16px; display: block; margin-bottom: 10px; }
+        .btn-delete { color: #DB0007; background: none; border: none; cursor: pointer; font-size: 13px; position: absolute; top: 30px; right: 30px; }

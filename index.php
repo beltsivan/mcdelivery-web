@@ -7,16 +7,18 @@ include('includes/header.php');
 // 2. Logic to determine Greeting and Category
 $hour = date('H'); // Gets hour from 00 to 23
 
+$fname = isset($_SESSION['Cust_FName']) ? $_SESSION['Cust_FName'] : "Guest";
+
 if ($hour >= 5 && $hour < 11) {
-    $greeting = "Good Morning!";
+    $greeting = "Good Morning, " . $fname . "!";
     $subtext = "Say hooray with these breakfast treats!";
     $category = "Breakfast";
 } else if ($hour >= 11 && $hour < 17) {
-    $greeting = "Good Afternoon!";
+    $greeting = "Good Afternoon, " . $fname . "!";
     $subtext = "Enjoy your favorite lunch meals!";
-    $category = "Dinner Specials"; 
+    $category = "Dinner Specials";
 } else {
-    $greeting = "Good Evening!";
+    $greeting = "Good Evening, " . $fname . "!";
     $subtext = "Treat yourself with these dinner specials!";
     $category = "Dinner Specials";
 }
@@ -187,7 +189,7 @@ if (mysqli_num_rows($featured_result) > 0) {
 ?>
     </div>
 </div>
+<script src="js/slider.js?v=<?php echo time(); ?>"></script>
 </main>
 
 <?php include('includes/footer.php'); ?>
-<script src="js/slider.js?v=<?php echo time(); ?>"></script>
