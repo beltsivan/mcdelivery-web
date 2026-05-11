@@ -1,6 +1,20 @@
 <?php
-include('config/db.php'); 
 session_start();
+
+if (!isset($_SESSION['Staff_Id'])) {
+    header('Location: staff_login.php');
+    exit;
+}
+
+include('config/db.php');
+require_once('includes/cart.php');
+
+$staffRole = $_SESSION['Staff_Role'] ?? 'Staff';
+
+// If kitchen staff, default to orders page
+if ($staffRole !== 'Admin' && !isset($_GET['page'])) {
+    $_GET['page'] = 'orders';
+}
 // Processing Logic for Products
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['mcdomenuitem'])) {
     $name = $_POST['Menu_Name'];
@@ -79,10 +93,15 @@ if (isset($_GET['delete_id'])) {
     <aside class="admin-sidebar">                                                                      
         <div class="admin-logo">McDelivery Admin</div>
         <nav class="admin-nav">
-            <a href="admin_dashboard.php?page=overview">Overview</a>
-            <a href="admin_dashboard.php?page=products">Manage Products</a>
-            <a href="admin_dashboard.php?page=staff">Manage Staff</a>
-            <a href="logout.php">Logout</a>
+            <?php if ($staffRole === 'Admin'): ?>
+                <a href="admin_dashboard.php?page=overview">Overview</a>
+                <a href="admin_dashboard.php?page=products">Manage Products</a>
+                <a href="admin_dashboard.php?page=orders">Orders</a>
+                <a href="admin_dashboard.php?page=staff">Manage Staff</a>
+            <?php else: ?>
+                <a href="admin_dashboard.php?page=orders">Orders</a>
+            <?php endif; ?>
+            <a href="logout.php?from=admin">Logout</a>
         </nav>
     </aside>
 
@@ -94,13 +113,15 @@ if (isset($_GET['delete_id'])) {
         <?php 
             $page = $_GET['page'] ?? 'overview';
             if ($page == 'products') {
-                // Fetch items for the products panel
                 $all_items = mysqli_query($conn, "SELECT * FROM mcdomenuitem ORDER BY Menu_Category ASC");
                 include 'admin_add_products.php';
             } elseif ($page == 'staff') {
                 include 'admin_manage_users.php';
+            } elseif ($page == 'orders') {
+                include 'admin_kitchen_orders.php';
             } else {
                 echo "<h1>Dashboard Overview</h1>";
+                echo "<p>Welcome, " . htmlspecialchars($_SESSION['Staff_FName']) . "! You are logged in as <strong>" . htmlspecialchars($staffRole) . "</strong>.</p>";
             }
         ?>
     </main>

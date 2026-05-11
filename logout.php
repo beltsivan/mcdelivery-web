@@ -1,9 +1,14 @@
 <?php
-session_start(); // Access the current session
-session_unset(); // Remove all session variables (name, id, etc.)
-session_destroy(); // Completely destroy the session on the server
+session_start();
+session_unset();
+session_destroy();
 
-// Redirect back to the home page as a guest
-header("Location: index.php");
+$redirect = 'index.php';
+
+if (isset($_GET['from']) && $_GET['from'] === 'admin') {
+    $redirect = 'staff_login.php';
+}
+
+header("Location: $redirect");
 exit();
 ?>

@@ -53,7 +53,7 @@ if (isset($_SESSION['Cust_Id'])) {
             <a href="index.php">Home</a>
             <a href="menu.php">Menu</a>
             <a href="#">Send to Many</a>
-            <a href="#">Orders</a>
+            <a href="orders.php">Orders</a>
 
             <?php if (isset($_SESSION['Cust_Id'])): ?>
                 <div class="account-dropdown">
@@ -69,6 +69,8 @@ if (isset($_SESSION['Cust_Id'])) {
                 <a href="register.php" class="login-btn">Sign Up</a>
                 <span style="font-weight: bold;">|</span>
                 <a href="javascript:void(0)" onclick="showLogin()" class="login-btn">Log In</a>
+                <span style="color:#bbb; font-weight:bold;">|</span>
+                <a href="staff_login.php" style="color:#555; font-weight:bold; font-size:13px;">Staff</a>
             <?php endif; ?>
 
             <a href="javascript:void(0)" onclick="toggleBag()">
@@ -114,6 +116,9 @@ if (isset($_SESSION['Cust_Id'])) {
         <p class="modal-footer">
             Order fast and easy with a McDelivery account.<br>
             <a href="register.php" class="signup-link">Sign up here.</a>
+        </p>
+        <p style="margin-top: 10px; font-size: 12px;">
+            <a href="staff_login.php" style="color: #888; text-decoration: none;">Staff Login</a>
         </p>
     </div>
 </div>

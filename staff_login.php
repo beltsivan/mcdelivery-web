@@ -1,0 +1,154 @@
+<?php
+session_start();
+
+if (isset($_SESSION['Staff_Id'])) {
+    header('Location: admin_dashboard.php');
+    exit;
+}
+
+include('config/db.php');
+
+$error = '';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $email = trim($_POST['email']);
+    $password = $_POST['password'];
+
+    $stmt = mysqli_prepare($conn, "SELECT * FROM staff WHERE Staff_Email = ? LIMIT 1");
+
+    if ($stmt) {
+        mysqli_stmt_bind_param($stmt, "s", $email);
+        mysqli_stmt_execute($stmt);
+        $result = mysqli_stmt_get_result($stmt);
+        $staff = mysqli_fetch_assoc($result);
+        mysqli_stmt_close($stmt);
+
+        if ($staff && $password === $staff['Staff_Password']) {
+            $_SESSION['Staff_Id'] = (int) $staff['Staff_Id'];
+            $_SESSION['Staff_FName'] = $staff['Staff_FName'];
+            $_SESSION['Staff_LName'] = $staff['Staff_LName'];
+            $_SESSION['Staff_Role'] = $staff['Staff_Role'];
+            $_SESSION['Staff_Email'] = $staff['Staff_Email'];
+
+            header('Location: admin_dashboard.php');
+            exit;
+        } else {
+            $error = 'Invalid email or password.';
+        }
+    } else {
+        $error = 'Database error.';
+    }
+}
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Staff Login - McDelivery Admin</title>
+    <link rel="stylesheet" href="css/admin/admin_style.css">
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: #292929;
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+        }
+        .login-card {
+            background: #fff;
+            border-radius: 18px;
+            padding: 48px 36px;
+            width: 380px;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+        .login-card h1 {
+            color: #292929;
+            font-size: 24px;
+            margin: 0 0 6px;
+        }
+        .login-card .subtitle {
+            color: #777;
+            font-size: 14px;
+            margin-bottom: 28px;
+        }
+        .login-card input {
+            width: 100%;
+            padding: 13px 14px;
+            margin-bottom: 14px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            box-sizing: border-box;
+            font-size: 14px;
+        }
+        .login-card input:focus {
+            outline: 2px solid #FFBC0D;
+            border-color: #FFBC0D;
+        }
+        .login-card button {
+            width: 100%;
+            background: #FFBC0D;
+            border: none;
+            padding: 14px;
+            border-radius: 30px;
+            font-weight: bold;
+            font-size: 15px;
+            cursor: pointer;
+            color: #292929;
+        }
+        .login-card button:hover {
+            background: #e5a90b;
+        }
+        .error-msg {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 13px;
+        }
+        .login-card .admin-badge {
+            display: inline-block;
+            background: #292929;
+            color: #FFBC0D;
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-bottom: 16px;
+        }
+        .login-card .back-link {
+            display: block;
+            margin-top: 18px;
+            color: #888;
+            font-size: 13px;
+            text-decoration: none;
+        }
+        .login-card .back-link:hover {
+            color: #292929;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <div class="admin-badge">STAFF LOGIN</div>
+        <h1>Welcome</h1>
+        <p class="subtitle">Sign in to manage McDelivery</p>
+
+        <?php if ($error): ?>
+            <div class="error-msg"><?php echo htmlspecialchars($error); ?></div>
+        <?php endif; ?>
+
+        <form method="POST">
+            <input type="email" name="email" placeholder="Email" required>
+            <input type="password" name="password" placeholder="Password" required>
+            <button type="submit">Log In</button>
+        </form>
+
+        <a href="index.php" class="back-link">&larr; Back to Customer Site</a>
+    </div>
+</body>
+</html>

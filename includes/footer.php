@@ -156,6 +156,72 @@ $grandTotal = $bagTotal + $deliveryFee;
     text-align: center;
 }
 
+.qty-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 6px 0;
+}
+
+.qty-form {
+    margin: 0;
+}
+
+.qty-btn {
+    background: #FFBC0D;
+    border: none;
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    padding: 0;
+}
+
+.qty-btn:hover {
+    background: #e5a90b;
+}
+
+.qty-value {
+    font-weight: bold;
+    font-size: 15px;
+    min-width: 20px;
+    text-align: center;
+}
+
+.unit-price {
+    color: #999;
+    font-size: 12px;
+}
+
+.payment-methods {
+    border-top: 1px solid #eee;
+    padding: 14px 0;
+    margin: 8px 0 4px;
+}
+
+.pay-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 0;
+    cursor: pointer;
+    font-size: 13px;
+    color: #444;
+}
+
+.pay-option input[type="radio"] {
+    accent-color: #FFBC0D;
+    width: 16px;
+    height: 16px;
+    margin: 0;
+}
+
 </style>
     <div class="bag-content">
         <?php if (!empty($bagItems)): ?>
@@ -168,7 +234,22 @@ $grandTotal = $bagTotal + $deliveryFee;
                     <img src="<?php echo htmlspecialchars($imagePath); ?>" alt="<?php echo htmlspecialchars($bagItem['name']); ?>">
                     <div class="item-details">
                         <p><?php echo htmlspecialchars($bagItem['name']); ?></p>
-                        <span><?php echo (int) $bagItem['quantity']; ?> x ₱<?php echo number_format($bagItem['price'], 2); ?></span>
+                        <div class="qty-controls">
+                            <form method="POST" action="update_cart.php" class="qty-form">
+                                <input type="hidden" name="menu_item_id" value="<?php echo (int) $bagItem['id']; ?>">
+                                <input type="hidden" name="action" value="decrease">
+                                <input type="hidden" name="redirect" value="<?php echo htmlspecialchars($_SERVER['REQUEST_URI']); ?>">
+                                <button type="submit" class="qty-btn">&minus;</button>
+                            </form>
+                            <span class="qty-value"><?php echo (int) $bagItem['quantity']; ?></span>
+                            <form method="POST" action="update_cart.php" class="qty-form">
+                                <input type="hidden" name="menu_item_id" value="<?php echo (int) $bagItem['id']; ?>">
+                                <input type="hidden" name="action" value="increase">
+                                <input type="hidden" name="redirect" value="<?php echo htmlspecialchars($_SERVER['REQUEST_URI']); ?>">
+                                <button type="submit" class="qty-btn">+</button>
+                            </form>
+                        </div>
+                        <span class="unit-price">₱<?php echo number_format($bagItem['price'], 2); ?> each</span>
                     </div>
                     <strong>₱<?php echo number_format($lineTotal, 2); ?></strong>
                 </div>
@@ -191,7 +272,27 @@ $grandTotal = $bagTotal + $deliveryFee;
             <span>Total</span>
             <span>₱<?php echo number_format($grandTotal, 2); ?></span>
         </div>
-        <button class="checkout-btn" <?php echo empty($bagItems) ? 'disabled' : ''; ?>>Proceed to Checkout</button>
+        <?php if (isset($_SESSION['Cust_Id'])): ?>
+            <form method="POST" action="checkout.php">
+                <div class="payment-methods">
+                    <label class="pay-option">
+                        <input type="radio" name="payment_method" value="Cash on Delivery" checked>
+                        <span>Cash on Delivery</span>
+                    </label>
+                    <label class="pay-option">
+                        <input type="radio" name="payment_method" value="GCash">
+                        <span>GCash</span>
+                    </label>
+                    <label class="pay-option">
+                        <input type="radio" name="payment_method" value="Bank Transfer">
+                        <span>Bank Transfer</span>
+                    </label>
+                </div>
+                <button class="checkout-btn" type="submit" <?php echo empty($bagItems) ? 'disabled' : ''; ?>>Proceed to Checkout</button>
+            </form>
+        <?php else: ?>
+            <button class="checkout-btn" onclick="showLogin()" <?php echo empty($bagItems) ? 'disabled' : ''; ?>>Log in to Checkout</button>
+        <?php endif; ?>
     </div>
 </div>
 
