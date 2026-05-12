@@ -69,8 +69,6 @@ if (isset($_SESSION['Cust_Id'])) {
                 <a href="register.php" class="login-btn">Sign Up</a>
                 <span style="font-weight: bold;">|</span>
                 <a href="javascript:void(0)" onclick="showLogin()" class="login-btn">Log In</a>
-                <span style="color:#bbb; font-weight:bold;">|</span>
-                <a href="staff_login.php" style="color:#555; font-weight:bold; font-size:13px;">Staff</a>
             <?php endif; ?>
 
             <a href="javascript:void(0)" onclick="toggleBag()">
@@ -81,34 +79,44 @@ if (isset($_SESSION['Cust_Id'])) {
     </div>
 </header>
 
-<div id="loginModal" class="modal-overlay" style="display: none;">
+<div id="loginModal" class="modal-overlay" style="display: <?php echo (isset($_SESSION['show_login_modal']) && $_SESSION['show_login_modal']) ? 'flex' : 'none'; ?>;">
     <div class="modal-card">
         <span class="close-btn" onclick="closeLogin()">&times;</span>
         
         <div class="modal-header">
-            <img src="images/mcLogo.jpg" alt="Logo" class="modal-logo">
+            <img src="images/mcdologo.png" alt="Logo" class="modal-logo">
             <h2>Welcome back!</h2>
             <p>Sign in to your account.</p>
         </div>
 <?php 
-    // Ensure session is started
-    if (isset($_SESSION['error'])): 
+    if (isset($_SESSION['login_error'])): 
     ?>
-        <div class="ui-error-msg">
+        <div class="error-banner">
+            <span class="icon">&#9888;</span>
             <?php 
-                echo $_SESSION['error']; 
-                unset($_SESSION['error']); // Remove it so it won't show after refresh
+                echo $_SESSION['login_error']; 
+                unset($_SESSION['login_error']);
             ?>
         </div>
-    <?php endif; ?>
+    <?php endif; 
+    if (isset($_SESSION['reg_success'])): 
+        unset($_SESSION['reg_success']);
+    ?>
+        <div class="error-banner" style="background:#d4edda;color:#155724;border-left-color:#28a745;">
+            <span class="icon">&#10003;</span>
+            Account created successfully! Please log in.
+        </div>
+    <?php endif;
+    unset($_SESSION['show_login_modal']);
+    ?>
         <form action="login.php" method="POST">
-            <input type="email" name="email" placeholder="Email" required>
+            <input type="email" name="email" placeholder="Email" value="<?php echo isset($_SESSION['login_email']) ? htmlspecialchars($_SESSION['login_email']) : ''; ?>" required>
             <input type="password" name="password" placeholder="Password" required>
             <a href="#" class="forgot-pass">Forgot your password?</a>
             <button type="submit" class="btn-login-submit">Log In</button>
         </form>
 
-        <div class="modal-divider"><span>OR</span></div>
+        <div class="modal-divider"><span></span></div>
 
         <button type="button" class="btn-facebook">Log in with Facebook</button>
         <button type="button" class="btn-guest" onclick="closeLogin()">Continue as guest</button>
@@ -122,3 +130,4 @@ if (isset($_SESSION['Cust_Id'])) {
         </p>
     </div>
 </div>
+<?php unset($_SESSION['login_email']); ?>

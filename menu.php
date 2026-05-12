@@ -4,15 +4,15 @@ require_once('includes/cart.php');
 
 $category_map = [
     'Featured'          => "Menu_Category = 'Featured'",
-    'Group Meals'       => "Menu_Category = 'Dinner Special'", // Maps 'Group Meals' to 'Dinner Special'
-    'Chicken'           => "Menu_Category IN ('Chicken', 'Exclusives')", // Combines two DB categories
+    'Group Meals'       => "Menu_Category = 'Group Meals'",
+    'Chicken'           => "Menu_Category IN ('Chicken', 'Exclusives')",
     'Burgers'           => "Menu_Category = 'Burgers'",
-    'McSpaghetti'       => "Menu_Category = 'Pasta'", // Change 'Pasta' to whatever your DB uses
-    'Desserts & Drinks' => "Menu_Category IN ('Dessert', 'Drinks')",
+    'McSpaghetti'       => "Menu_Category = 'McSpaghetti'",
+    'Desserts & Drinks' => "Menu_Category = 'Desserts & Drinks'",
     'McCafe'            => "Menu_Category = 'McCafe'",
-    'Fries & Extras'    => "Menu_Category = 'Sides'",
+    'Fries & Extras'    => "Menu_Category = 'Fries & Extras'",
     'Happy Meal'        => "Menu_Category = 'Happy Meal'",
-    'Sulit Busog Meals' => "Menu_MenuItemId IN (10, 11, 12)" // Or filter by specific IDs
+    'Sulit Busog Meals' => "Menu_Category = 'Sulit Busog Meals'"
 ];
 
 // Get the category from URL, default to Featured
@@ -63,7 +63,8 @@ foreach ($menuBagItems as $menuBagItem) {
             <a class="card-link" href="productdetails.php?id=<?php echo $row['Menu_MenuItemId']; ?>">
                 <div class="card">
                     <div class="card-image">
-                        <img src="uploads/<?php echo htmlspecialchars($row['Menu_ImageURL']); ?>" alt="<?php echo htmlspecialchars($row['Menu_Name']); ?>">
+                        <img src="<?php echo htmlspecialchars(mcd_normalize_image_path($row['Menu_ImageURL'])); ?>" alt="<?php echo htmlspecialchars($row['Menu_Name']); ?>">
+                       
                     </div>
                     <div class="card-info">
                         <h3><?php echo htmlspecialchars($row['Menu_Name']); ?></h3>
