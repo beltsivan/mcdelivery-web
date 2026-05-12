@@ -46,13 +46,15 @@ if (isset($_SESSION['Cust_Id'])) {
         </a>
 
         <div class="search-bar">
-            <input type="text" placeholder="Search for your McDonald's favorite">
+            <form action="menu.php" method="GET" style="display:flex;width:100%;">
+                <input type="text" name="search" placeholder="Search for your McDonald's favorite" value="<?php echo isset($_GET['search']) ? htmlspecialchars($_GET['search']) : ''; ?>" style="flex:1;">
+                
+            </form>
         </div>
 
         <nav>
             <a href="index.php">Home</a>
             <a href="menu.php">Menu</a>
-            <a href="#">Send to Many</a>
             <a href="orders.php">Orders</a>
 
             <?php if (isset($_SESSION['Cust_Id'])): ?>

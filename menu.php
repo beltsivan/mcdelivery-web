@@ -15,11 +15,16 @@ $category_map = [
     'Sulit Busog Meals' => "Menu_Category = 'Sulit Busog Meals'"
 ];
 
-// Get the category from URL, default to Featured
-$nav_cat = isset($_GET['category']) ? $_GET['category'] : 'Featured';
+$search = isset($_GET['search']) ? trim($_GET['search']) : '';
 
-// Use the map to get the SQL filter, or fallback to a default
-$sql_filter = isset($category_map[$nav_cat]) ? $category_map[$nav_cat] : "Menu_Category = '$nav_cat'";
+if ($search !== '') {
+    $safe_search = mysqli_real_escape_string($conn, $search);
+    $sql_filter = "Menu_Name LIKE '%$safe_search%'";
+    $nav_cat = 'Search';
+} else {
+    $nav_cat = isset($_GET['category']) ? $_GET['category'] : 'Featured';
+    $sql_filter = isset($category_map[$nav_cat]) ? $category_map[$nav_cat] : "Menu_Category = '$nav_cat'";
+}
 
 $query = "SELECT * FROM McdoMenuItem WHERE $sql_filter AND Menu_Available = 1";
 
@@ -52,7 +57,6 @@ foreach ($menuBagItems as $menuBagItem) {
 </div>
 
 <div class="menu-page-wrapper">
-    
     <div class="menu-content-container">
         <main class="product-section">
             <div class="menu-grid">
@@ -75,6 +79,8 @@ foreach ($menuBagItems as $menuBagItem) {
             </a>
             <?php
         }
+    } elseif ($search !== '') {
+        echo "<p>No items found for \"<strong>" . htmlspecialchars($search) . "</strong>\".</p>";
     } else {
         echo "<p>No items found for " . htmlspecialchars($nav_cat) . ".</p>";
     }

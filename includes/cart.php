@@ -192,7 +192,7 @@ function mcd_get_payment_info($conn, $orderId) {
     return $payment;
 }
 
-function mcd_checkout($conn, $custId, $paymentMethod = 'Cash on Delivery') {
+function mcd_checkout($conn, $custId, $addressId, $paymentMethod = 'Cash on Delivery') {
     $cartItems = mcd_get_customer_bag_items($conn, $custId);
 
     if (empty($cartItems)) {
@@ -210,13 +210,13 @@ function mcd_checkout($conn, $custId, $paymentMethod = 'Cash on Delivery') {
     $deliveryFee = 49;
     $grandTotal = $subtotal + $deliveryFee;
 
-    $stmt = mysqli_prepare($conn, "INSERT INTO mcorder (Order_Cust_Id, Order_OrderDate, Order_Status, Order_TotalAmount, Order_Quantity, Order_DeliveryFee) VALUES (?, NOW(), 'Pending', ?, ?, ?)");
+    $stmt = mysqli_prepare($conn, "INSERT INTO mcorder (Order_Cust_Id, Order_OrderDate, Order_Status, Order_TotalAmount, Order_Quantity, Order_DeliveryFee, Order_Add_Id) VALUES (?, NOW(), 'Pending', ?, ?, ?, ?)");
 
     if (!$stmt) {
         return false;
     }
 
-    mysqli_stmt_bind_param($stmt, "iddi", $custId, $grandTotal, $totalQuantity, $deliveryFee);
+    mysqli_stmt_bind_param($stmt, "iddii", $custId, $grandTotal, $totalQuantity, $deliveryFee, $addressId);
     $orderCreated = mysqli_stmt_execute($stmt);
     $orderId = mysqli_stmt_insert_id($stmt);
     mysqli_stmt_close($stmt);
@@ -278,7 +278,7 @@ function mcd_get_order_items($conn, $orderId) {
 
 function mcd_get_kitchen_orders($conn, $statusFilter = null) {
     $orders = [];
-    $sql = "SELECT o.*, c.Cust_FName, c.Cust_LName FROM mcorder o INNER JOIN customer c ON c.Cust_Id = o.Order_Cust_Id";
+    $sql = "SELECT o.*, c.Cust_FName, c.Cust_LName, a.Add_Street, a.Add_Barangay, a.Add_City, a.Add_Municipality, a.Add_PostalCode FROM mcorder o INNER JOIN customer c ON c.Cust_Id = o.Order_Cust_Id LEFT JOIN address a ON a.Add_Id = o.Order_Add_Id";
 
     if ($statusFilter) {
         if (is_array($statusFilter)) {
@@ -359,6 +359,13 @@ function mcd_update_order_status($conn, $orderId, $newStatus) {
         mysqli_stmt_bind_param($dlvryStmt, "is", $orderId, $newStatus);
         mysqli_stmt_execute($dlvryStmt);
         mysqli_stmt_close($dlvryStmt);
+
+        if ($newStatus === 'Completed') {
+            $payStmt = mysqli_prepare($conn, "UPDATE payment SET Pay_PaymentStatus = 'Done' WHERE Pay_Order_Id = ? AND Pay_PaymentType = 'Cash on Delivery'");
+            mysqli_stmt_bind_param($payStmt, "i", $orderId);
+            mysqli_stmt_execute($payStmt);
+            mysqli_stmt_close($payStmt);
+        }
 
         return true;
     }
