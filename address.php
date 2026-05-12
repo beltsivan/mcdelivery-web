@@ -25,8 +25,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['address'])) {
     $stmt->bind_param("isssss", $cust_id, $street, $brgy, $city, $muni, $zip);
 
     if ($stmt->execute()) {
-        // Redirect to the same page to "refresh" the list and clear the POST data
-        header("Location: address.php?success=1");
+        $addId = $stmt->insert_id;
+        if (isset($_GET['from']) && $_GET['from'] === 'checkout') {
+            header("Location: checkout.php?selected=$addId");
+        } else {
+            header("Location: address.php?success=1");
+        }
         exit();
     }
 }
@@ -73,6 +77,13 @@ $result = $stmt->get_result();
         </aside>
 
         <main class="profile-main">
+    <?php if (isset($_GET['required'])): ?>
+        <div class="error-banner">
+            <span class="icon">&#9888;</span>
+            You need to add a delivery address before you can place an order.
+        </div>
+    <?php endif; ?>
+
     <div id="address-list">
         <div class="add-btn-container">
             <button class="btn-add" onclick="showAddForm()">+ Add New Address</button>
@@ -109,7 +120,7 @@ $result = $stmt->get_result();
             <button type="button" onclick="hideAddForm()" style="background:none; border:none; color:#DB0007; cursor:pointer; font-weight:bold;">✕ Cancel</button>
         </div>
         
-        <form action="address.php" method="POST">
+        <form action="address.php<?php echo isset($_GET['from']) ? '?from=' . urlencode($_GET['from']) : (isset($_GET['required']) ? '?from=checkout' : ''); ?>" method="POST">
             <div class="form-group">
                 <label>Street / House No.</label>
                 <input type="text" name="Add_Street" required>

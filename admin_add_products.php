@@ -33,6 +33,8 @@
 
     <div class="display-products-card">
         <h3>Current Menu Items</h3>
+        <input type="text" id="menuSearch" onkeyup="filterMenuItems()" placeholder="Search menu items..." style="width:100%;padding:10px;margin-bottom:12px;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;">
+        <div style="max-height:500px;overflow-y:auto;">
         <table class="menu-table">
             <thead>
                 <tr>
@@ -42,7 +44,7 @@
                     <th>Actions</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="menuTableBody">
                 <?php while($row = mysqli_fetch_assoc($all_items)): ?>
                 <tr>
                     <td class="item-name"><?php echo htmlspecialchars($row['Menu_Name']); ?></td>
@@ -66,6 +68,7 @@
                 <?php endwhile; ?>
             </tbody>
         </table>
+        </div>
     </div>
     <div id="editModal" class="modal-overlay">
     <div class="modal-content">
@@ -112,6 +115,20 @@
 </div>
 
 <script>
+function filterMenuItems() {
+    var input = document.getElementById('menuSearch');
+    var filter = input.value.toLowerCase();
+    var tbody = document.getElementById('menuTableBody');
+    var rows = tbody.getElementsByTagName('tr');
+    for (var i = 0; i < rows.length; i++) {
+        var name = rows[i].getElementsByClassName('item-name')[0];
+        if (name) {
+            var txt = name.textContent || name.innerText;
+            rows[i].style.display = txt.toLowerCase().indexOf(filter) > -1 ? '' : 'none';
+        }
+    }
+}
+
 function openEditModal(item) {
     document.getElementById('edit_id').value = item.Menu_MenuItemId;
     document.getElementById('edit_name').value = item.Menu_Name;

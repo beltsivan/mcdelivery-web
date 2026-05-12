@@ -4,22 +4,27 @@ require_once('includes/cart.php');
 
 $category_map = [
     'Featured'          => "Menu_Category = 'Featured'",
-    'Group Meals'       => "Menu_Category = 'Dinner Special'", // Maps 'Group Meals' to 'Dinner Special'
-    'Chicken'           => "Menu_Category IN ('Chicken', 'Exclusives')", // Combines two DB categories
+    'Group Meals'       => "Menu_Category = 'Group Meals'",
+    'Chicken'           => "Menu_Category IN ('Chicken', 'Exclusives')",
     'Burgers'           => "Menu_Category = 'Burgers'",
-    'McSpaghetti'       => "Menu_Category = 'Pasta'", // Change 'Pasta' to whatever your DB uses
-    'Desserts & Drinks' => "Menu_Category IN ('Dessert', 'Drinks')",
+    'McSpaghetti'       => "Menu_Category = 'McSpaghetti'",
+    'Desserts & Drinks' => "Menu_Category = 'Desserts & Drinks'",
     'McCafe'            => "Menu_Category = 'McCafe'",
-    'Fries & Extras'    => "Menu_Category = 'Sides'",
+    'Fries & Extras'    => "Menu_Category = 'Fries & Extras'",
     'Happy Meal'        => "Menu_Category = 'Happy Meal'",
-    'Sulit Busog Meals' => "Menu_MenuItemId IN (10, 11, 12)" // Or filter by specific IDs
+    'Sulit Busog Meals' => "Menu_Category = 'Sulit Busog Meals'"
 ];
 
-// Get the category from URL, default to Featured
-$nav_cat = isset($_GET['category']) ? $_GET['category'] : 'Featured';
+$search = isset($_GET['search']) ? trim($_GET['search']) : '';
 
-// Use the map to get the SQL filter, or fallback to a default
-$sql_filter = isset($category_map[$nav_cat]) ? $category_map[$nav_cat] : "Menu_Category = '$nav_cat'";
+if ($search !== '') {
+    $safe_search = mysqli_real_escape_string($conn, $search);
+    $sql_filter = "Menu_Name LIKE '%$safe_search%'";
+    $nav_cat = 'Search';
+} else {
+    $nav_cat = isset($_GET['category']) ? $_GET['category'] : 'Featured';
+    $sql_filter = isset($category_map[$nav_cat]) ? $category_map[$nav_cat] : "Menu_Category = '$nav_cat'";
+}
 
 $query = "SELECT * FROM McdoMenuItem WHERE $sql_filter AND Menu_Available = 1";
 
@@ -52,7 +57,6 @@ foreach ($menuBagItems as $menuBagItem) {
 </div>
 
 <div class="menu-page-wrapper">
-    
     <div class="menu-content-container">
         <main class="product-section">
             <div class="menu-grid">
@@ -63,7 +67,8 @@ foreach ($menuBagItems as $menuBagItem) {
             <a class="card-link" href="productdetails.php?id=<?php echo $row['Menu_MenuItemId']; ?>">
                 <div class="card">
                     <div class="card-image">
-                        <img src="uploads/<?php echo htmlspecialchars($row['Menu_ImageURL']); ?>" alt="<?php echo htmlspecialchars($row['Menu_Name']); ?>">
+                        <img src="<?php echo htmlspecialchars(mcd_normalize_image_path($row['Menu_ImageURL'])); ?>" alt="<?php echo htmlspecialchars($row['Menu_Name']); ?>">
+                       
                     </div>
                     <div class="card-info">
                         <h3><?php echo htmlspecialchars($row['Menu_Name']); ?></h3>
@@ -74,6 +79,8 @@ foreach ($menuBagItems as $menuBagItem) {
             </a>
             <?php
         }
+    } elseif ($search !== '') {
+        echo "<p>No items found for \"<strong>" . htmlspecialchars($search) . "</strong>\".</p>";
     } else {
         echo "<p>No items found for " . htmlspecialchars($nav_cat) . ".</p>";
     }

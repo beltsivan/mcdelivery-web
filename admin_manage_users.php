@@ -78,6 +78,7 @@
 
     <div class="product-list-container" style="flex: 2; background: white; padding: 25px; border-radius: 12px;">
         <h3>Current Staff</h3>
+        <input type="text" id="staffSearch" onkeyup="filterStaff()" placeholder="Search staff..." style="width:100%;padding:10px;margin-bottom:12px;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;">
         <hr>
         <?php
         $all_staff = mysqli_query($conn, "SELECT s.*, b.Brnch_City FROM staff s LEFT JOIN mcbranch b ON b.Brnch_Id = s.Staff_Brnch_Id ORDER BY s.Staff_Id ASC");
@@ -112,3 +113,24 @@
         </table>
     </div>
 </div>
+
+<script>
+function filterStaff() {
+    var input = document.getElementById('staffSearch');
+    var filter = input.value.toLowerCase();
+    var tbody = document.querySelector('.product-list-container tbody');
+    var rows = tbody.getElementsByTagName('tr');
+    for (var i = 0; i < rows.length; i++) {
+        var cells = rows[i].getElementsByTagName('td');
+        var found = false;
+        for (var j = 0; j < cells.length; j++) {
+            var txt = cells[j].textContent || cells[j].innerText;
+            if (txt.toLowerCase().indexOf(filter) > -1) {
+                found = true;
+                break;
+            }
+        }
+        rows[i].style.display = found ? '' : 'none';
+    }
+}
+</script>

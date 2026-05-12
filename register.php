@@ -9,20 +9,32 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $pass  = $_POST['password'];
     $confirm_pass = $_POST['confirm_password'];
 
-    // Basic Validation
-    if ($pass !== $confirm_pass) {
+    $phone_clean = preg_replace('/[^0-9]/', '', $phone);
+    if (strlen($phone_clean) > 11) {
+        $error = "Invalid phone number format. Maximum of 11 digits.";
+    } elseif ($pass !== $confirm_pass) {
         $error = "Passwords do not match!";
     } else {
-        $hashed_pass = password_hash($pass, PASSWORD_DEFAULT);
-        
-        $stmt = $conn->prepare("INSERT INTO Customer (Cust_FName, Cust_LName, Cust_Email, Cust_Password, Cust_Phone) VALUES (?, ?, ?, ?, ?)");
-        $stmt->bind_param("sssss", $fname, $lname, $email, $hashed_pass, $phone);
-
-        if ($stmt->execute()) {
-            header("Location: login.php?success=1");
-            exit();
+        $check = $conn->prepare("SELECT Cust_Id FROM Customer WHERE Cust_Email = ?");
+        $check->bind_param("s", $email);
+        $check->execute();
+        $check->store_result();
+        if ($check->num_rows > 0) {
+            $error = "Email is already used.";
         } else {
-            $error = "Email already registered.";
+            $hashed_pass = password_hash($pass, PASSWORD_DEFAULT);
+            $stmt = $conn->prepare("INSERT INTO Customer (Cust_FName, Cust_LName, Cust_Email, Cust_Password, Cust_Phone) VALUES (?, ?, ?, ?, ?)");
+            $stmt->bind_param("sssss", $fname, $lname, $email, $hashed_pass, $phone);
+
+            if ($stmt->execute()) {
+                session_start();
+                $_SESSION['reg_success'] = true;
+                $_SESSION['show_login_modal'] = true;
+                header("Location: index.php");
+                exit();
+            } else {
+                $error = "An error occurred. Please try again.";
+            }
         }
     }
 }
@@ -36,6 +48,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         <p>Tell us more about you so we can give you a better delivery experience.</p>
 
         <div class="reg-card">
+            <?php if (isset($error)): ?>
+                <div class="error-banner">
+                    <span class="icon">&#9888;</span>
+                    <?php echo $error; ?>
+                </div>
+            <?php endif; ?>
             <form action="register.php" method="POST" id="regForm">
                 <span class="section-title">User Details</span>
                 <div class="form-grid">

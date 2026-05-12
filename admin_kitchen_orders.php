@@ -6,6 +6,7 @@
 .order-card { background: #fff; border-radius: 14px; padding: 22px; margin-bottom: 18px; box-shadow: 0 4px 15px rgba(0,0,0,0.06); border-left: 5px solid #FFBC0D; }
 .order-card.preparing { border-left-color: #007bff; }
 .order-card.ready { border-left-color: #28a745; }
+.order-card.completed { border-left-color: #6c757d; }
 .order-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
 .order-header h3 { margin: 0; font-size: 18px; color: #292929; }
 .order-header .order-time { color: #888; font-size: 13px; }
@@ -30,6 +31,16 @@
 .pay-status-label.pending { background: #fff3cd; color: #856404; }
 .empty-orders { text-align: center; padding: 60px 20px; color: #888; }
 .empty-orders h3 { color: #555; }
+.customer-group { background: #fff; border-radius: 14px; margin-bottom: 14px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); overflow: hidden; }
+.customer-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 22px; cursor: pointer; transition: 0.2s; border-left: 5px solid #6c757d; }
+.customer-header:hover { background: #f9f9f9; }
+.customer-header h3 { margin: 0; font-size: 16px; color: #292929; }
+.customer-header .cust-meta { color: #888; font-size: 13px; }
+.customer-header .expand-icon { font-size: 14px; color: #999; transition: 0.2s; }
+.customer-header.open .expand-icon { transform: rotate(180deg); }
+.customer-orders { display: none; }
+.customer-orders.open { display: block; }
+.customer-orders .order-card { margin: 0 14px 14px; border-left-color: #adb5bd; }
 </style>
 
 <div class="kitchen-orders">
@@ -40,7 +51,7 @@
         'pending'   => ['Pending'],
         'preparing' => ['Preparing'],
         'ready'     => ['Ready'],
-        'all'       => null,
+        'all'       => ['Completed'],
     ];
 
     $tabLabel = [
@@ -83,80 +94,165 @@
         <?php endforeach; ?>
     </div>
 
-    <?php if (empty($orders)): ?>
-        <div class="empty-orders">
-            <h3>No orders found</h3>
-            <p>There are no orders with this status.</p>
-        </div>
-    <?php endif; ?>
-
-    <?php foreach ($orders as $order): ?>
-        <div class="order-card <?php echo strtolower($order['Order_Status']); ?>">
-            <div class="order-header">
-                <div>
-                    <h3>Order #<?php echo $order['Order_Id']; ?></h3>
-                    <span class="status-badge <?php echo strtolower($order['Order_Status']); ?>">
-                        <?php echo htmlspecialchars($order['Order_Status']); ?>
-                    </span>
+    <?php if ($currentTab === 'all'): ?>
+        <?php
+        $customers = [];
+        foreach ($orders as $order) {
+            $name = $order['Cust_FName'] . ' ' . $order['Cust_LName'];
+            $customers[$name][] = $order;
+        }
+        ?>
+        <?php if (empty($customers)): ?>
+            <div class="empty-orders"><h3>No completed orders</h3><p>No orders have been completed yet.</p></div>
+        <?php endif; ?>
+        <?php $idx = 0; foreach ($customers as $custName => $custOrders): $idx++; ?>
+            <div class="customer-group">
+                <div class="customer-header" onclick="toggleCustomer(<?php echo $idx; ?>)">
+                    <div>
+                        <h3><?php echo htmlspecialchars($custName); ?></h3>
+                        <span class="cust-meta"><?php echo count($custOrders); ?> order(s) &nbsp;|&nbsp; Total: ₱<?php echo number_format(array_sum(array_column($custOrders, 'Order_TotalAmount')), 2); ?></span>
+                    </div>
+                    <span class="expand-icon">&#9660;</span>
                 </div>
-                <div style="text-align:right;">
-                    <div class="order-time"><?php echo date('M d, Y - h:i A', strtotime($order['Order_OrderDate'])); ?></div>
-                    <?php if (!empty($order['Order_PrepTime'])): ?>
-                        <div class="prep-time-display">&nbsp;&#9200; <?php echo (int) $order['Order_PrepTime']; ?> mins</div>
+                <div class="customer-orders" id="customer-<?php echo $idx; ?>">
+                    <?php foreach ($custOrders as $order): ?>
+                        <div class="order-card completed">
+                            <div class="order-header">
+                                <div>
+                                    <h3>Order #<?php echo $order['Order_Id']; ?></h3>
+                                    <span class="status-badge completed">Completed</span>
+                                </div>
+                                <div style="text-align:right;">
+                                    <div class="order-time"><?php echo date('M d, Y - h:i A', strtotime($order['Order_OrderDate'])); ?></div>
+                                </div>
+                            </div>
+
+                            <?php if (!empty($order['Add_Street'])): ?>
+                                <div class="order-customer" style="font-size:13px;color:#666;">
+                                    &#128205; <?php echo htmlspecialchars($order['Add_Street']); ?>, Brgy. <?php echo htmlspecialchars($order['Add_Barangay']); ?>,
+                                    <?php echo htmlspecialchars($order['Add_Municipality']); ?>, <?php echo htmlspecialchars($order['Add_City']); ?> <?php echo htmlspecialchars($order['Add_PostalCode']); ?>
+                                </div>
+                            <?php endif; ?>
+
+                            <?php $paymentInfo = mcd_get_payment_info($conn, $order['Order_Id']); ?>
+                            <?php if ($paymentInfo): ?>
+                                <div class="order-payment">
+                                    <span>Payment: <strong><?php echo htmlspecialchars($paymentInfo['Pay_PaymentType']); ?></strong></span>
+                                    <span class="pay-status-label <?php echo strtolower($paymentInfo['Pay_PaymentStatus']); ?>">
+                                        <?php echo htmlspecialchars($paymentInfo['Pay_PaymentStatus']); ?>
+                                    </span>
+                                </div>
+                            <?php endif; ?>
+
+                            <div class="order-items">
+                                <?php foreach ($order['items'] as $item): ?>
+                                    <div class="order-item">
+                                        <span><?php echo (int) $item['OrderItem_Quantity']; ?>x <?php echo htmlspecialchars($item['Menu_Name']); ?></span>
+                                        <span>₱<?php echo number_format($item['OrderItem_Total'], 2); ?></span>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        <?php endforeach; ?>
+    <?php else: ?>
+        <?php if (empty($orders)): ?>
+            <div class="empty-orders">
+                <h3>No orders found</h3>
+                <p>There are no orders with this status.</p>
+            </div>
+        <?php endif; ?>
+
+        <?php foreach ($orders as $order): ?>
+            <div class="order-card <?php echo strtolower($order['Order_Status']); ?>">
+                <div class="order-header">
+                    <div>
+                        <h3>Order #<?php echo $order['Order_Id']; ?></h3>
+                        <span class="status-badge <?php echo strtolower($order['Order_Status']); ?>">
+                            <?php echo htmlspecialchars($order['Order_Status']); ?>
+                        </span>
+                    </div>
+                    <div style="text-align:right;">
+                        <div class="order-time"><?php echo date('M d, Y - h:i A', strtotime($order['Order_OrderDate'])); ?></div>
+                        <?php if (!empty($order['Order_PrepTime'])): ?>
+                            <div class="prep-time-display">&nbsp;&#9200; <?php echo (int) $order['Order_PrepTime']; ?> mins</div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+                <div class="order-customer">
+                    <strong><?php echo htmlspecialchars($order['Cust_FName'] . ' ' . $order['Cust_LName']); ?></strong>
+                    &nbsp;|&nbsp; Items: <?php echo (int) $order['Order_Quantity']; ?>
+                    &nbsp;|&nbsp; Total: ₱<?php echo number_format($order['Order_TotalAmount'], 2); ?>
+                </div>
+                <?php if (!empty($order['Add_Street'])): ?>
+                    <div class="order-customer" style="font-size:13px;color:#666;">
+                        &#128205; <?php echo htmlspecialchars($order['Add_Street']); ?>, Brgy. <?php echo htmlspecialchars($order['Add_Barangay']); ?>,
+                        <?php echo htmlspecialchars($order['Add_Municipality']); ?>, <?php echo htmlspecialchars($order['Add_City']); ?> <?php echo htmlspecialchars($order['Add_PostalCode']); ?>
+                    </div>
+                <?php endif; ?>
+
+                <?php
+                $paymentInfo = mcd_get_payment_info($conn, $order['Order_Id']);
+                ?>
+                <?php if ($paymentInfo): ?>
+                    <div class="order-payment">
+                        <span>Payment: <strong><?php echo htmlspecialchars($paymentInfo['Pay_PaymentType']); ?></strong></span>
+                        <span class="pay-status-label <?php echo strtolower($paymentInfo['Pay_PaymentStatus']); ?>">
+                            <?php echo htmlspecialchars($paymentInfo['Pay_PaymentStatus']); ?>
+                        </span>
+                    </div>
+                <?php endif; ?>
+
+                <div class="order-items">
+                    <?php foreach ($order['items'] as $item): ?>
+                        <div class="order-item">
+                            <span><?php echo (int) $item['OrderItem_Quantity']; ?>x <?php echo htmlspecialchars($item['Menu_Name']); ?></span>
+                            <span>₱<?php echo number_format($item['OrderItem_Total'], 2); ?></span>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+
+                <div class="order-actions">
+                    <?php if ($order['Order_Status'] === 'Pending'): ?>
+                        <form method="POST" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                            <input type="hidden" name="order_id" value="<?php echo $order['Order_Id']; ?>">
+                            <span class="prep-time-label">Prep time:</span>
+                            <input type="number" name="prep_time" class="prep-time-input" value="15" min="1" max="180">
+                            <span class="prep-time-label">mins</span>
+                            <button type="submit" name="accept_order" class="accept-btn">&#10003; Accept Order</button>
+                        </form>
+                    <?php elseif ($order['Order_Status'] === 'Preparing'): ?>
+                        <form method="POST">
+                            <input type="hidden" name="order_id" value="<?php echo $order['Order_Id']; ?>">
+                            <input type="hidden" name="new_status" value="Ready">
+                            <button type="submit" name="update_status" class="accept-btn" style="background:#007bff;">Mark as Ready</button>
+                        </form>
+                    <?php elseif ($order['Order_Status'] === 'Ready'): ?>
+                        <form method="POST">
+                            <input type="hidden" name="order_id" value="<?php echo $order['Order_Id']; ?>">
+                            <input type="hidden" name="new_status" value="Completed">
+                            <button type="submit" name="update_status" class="accept-btn" style="background:#6c757d;">Mark Completed</button>
+                        </form>
                     <?php endif; ?>
                 </div>
             </div>
-
-            <div class="order-customer">
-                <strong><?php echo htmlspecialchars($order['Cust_FName'] . ' ' . $order['Cust_LName']); ?></strong>
-                &nbsp;|&nbsp; Items: <?php echo (int) $order['Order_Quantity']; ?>
-                &nbsp;|&nbsp; Total: ₱<?php echo number_format($order['Order_TotalAmount'], 2); ?>
-            </div>
-
-            <?php
-            $paymentInfo = mcd_get_payment_info($conn, $order['Order_Id']);
-            ?>
-            <?php if ($paymentInfo): ?>
-                <div class="order-payment">
-                    <span>Payment: <strong><?php echo htmlspecialchars($paymentInfo['Pay_PaymentType']); ?></strong></span>
-                    <span class="pay-status-label <?php echo strtolower($paymentInfo['Pay_PaymentStatus']); ?>">
-                        <?php echo htmlspecialchars($paymentInfo['Pay_PaymentStatus']); ?>
-                    </span>
-                </div>
-            <?php endif; ?>
-
-            <div class="order-items">
-                <?php foreach ($order['items'] as $item): ?>
-                    <div class="order-item">
-                        <span><?php echo (int) $item['OrderItem_Quantity']; ?>x <?php echo htmlspecialchars($item['Menu_Name']); ?></span>
-                        <span>₱<?php echo number_format($item['OrderItem_Total'], 2); ?></span>
-                    </div>
-                <?php endforeach; ?>
-            </div>
-
-            <div class="order-actions">
-                <?php if ($order['Order_Status'] === 'Pending'): ?>
-                    <form method="POST" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-                        <input type="hidden" name="order_id" value="<?php echo $order['Order_Id']; ?>">
-                        <span class="prep-time-label">Prep time:</span>
-                        <input type="number" name="prep_time" class="prep-time-input" value="15" min="1" max="180">
-                        <span class="prep-time-label">mins</span>
-                        <button type="submit" name="accept_order" class="accept-btn">&#10003; Accept Order</button>
-                    </form>
-                <?php elseif ($order['Order_Status'] === 'Preparing'): ?>
-                    <form method="POST">
-                        <input type="hidden" name="order_id" value="<?php echo $order['Order_Id']; ?>">
-                        <input type="hidden" name="new_status" value="Ready">
-                        <button type="submit" name="update_status" class="accept-btn" style="background:#007bff;">Mark as Ready</button>
-                    </form>
-                <?php elseif ($order['Order_Status'] === 'Ready'): ?>
-                    <form method="POST">
-                        <input type="hidden" name="order_id" value="<?php echo $order['Order_Id']; ?>">
-                        <input type="hidden" name="new_status" value="Completed">
-                        <button type="submit" name="update_status" class="accept-btn" style="background:#6c757d;">Mark Completed</button>
-                    </form>
-                <?php endif; ?>
-            </div>
-        </div>
-    <?php endforeach; ?>
+        <?php endforeach; ?>
+    <?php endif; ?>
 </div>
+
+<script>
+function toggleCustomer(idx) {
+    var el = document.getElementById('customer-' + idx);
+    var header = el.previousElementSibling;
+    if (el.classList.contains('open')) {
+        el.classList.remove('open');
+        header.classList.remove('open');
+    } else {
+        el.classList.add('open');
+        header.classList.add('open');
+    }
+}
+</script>
