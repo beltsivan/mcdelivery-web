@@ -10,8 +10,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $confirm_pass = $_POST['confirm_password'];
 
     $phone_clean = preg_replace('/[^0-9]/', '', $phone);
-    if (strlen($phone_clean) > 11) {
-        $error = "Invalid phone number format. Maximum of 11 digits.";
+    if (strlen($phone_clean) !== 11) {
+        $error = "Invalid phone number format. Must be exactly 11 digits.";
     } elseif ($pass !== $confirm_pass) {
         $error = "Passwords do not match!";
     } else {
@@ -24,7 +24,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         } else {
             $hashed_pass = password_hash($pass, PASSWORD_DEFAULT);
             $stmt = $conn->prepare("INSERT INTO Customer (Cust_FName, Cust_LName, Cust_Email, Cust_Password, Cust_Phone) VALUES (?, ?, ?, ?, ?)");
-            $stmt->bind_param("sssss", $fname, $lname, $email, $hashed_pass, $phone);
+            $stmt->bind_param("sssss", $fname, $lname, $email, $hashed_pass, $phone_clean);
 
             if ($stmt->execute()) {
                 session_start();
@@ -65,7 +65,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 <span class="section-title">Login & Contact Details</span>
                 <div class="form-grid">
                     <input type="email" name="email" placeholder="Email" required>
-                    <input type="text" name="phone" placeholder="+63" required>
+                    <input type="text" name="phone" placeholder="e.g. 09123456789" inputmode="numeric" pattern="[0-9]{11}" maxlength="11" required>
                     <input type="password" name="password" placeholder="Password" required>
                     <input type="password" name="confirm_password" placeholder="Confirm Password" required>
                 </div>

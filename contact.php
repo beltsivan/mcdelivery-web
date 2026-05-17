@@ -13,14 +13,19 @@ $message = "";
 // --- UPDATE LOGIC ---
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_contact'])) {
     $new_num = $_POST['contact_num'];
+    $new_num_clean = preg_replace('/[^0-9]/', '', $new_num);
 
-    // Update the column Cust_Phone
-    $sql = "UPDATE Customer SET Cust_Phone = ? WHERE Cust_Id = ?";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("si", $new_num, $cust_id);
+    if (strlen($new_num_clean) !== 11) {
+        $message = "Invalid phone number. Must be exactly 11 digits.";
+    } else {
+        // Update the column Cust_Phone
+        $sql = "UPDATE Customer SET Cust_Phone = ? WHERE Cust_Id = ?";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("si", $new_num_clean, $cust_id);
 
-    if ($stmt->execute()) {
-        $message = "Contact number updated successfully!";
+        if ($stmt->execute()) {
+            $message = "Contact number updated successfully!";
+        }
     }
 }
 
@@ -67,6 +72,7 @@ $current_num = $user['Cust_Phone'] ?? "";
                         <input type="text" name="contact_num" 
                                value="<?php echo htmlspecialchars($current_num); ?>" 
                                placeholder="e.g. 09123456789" 
+                               inputmode="numeric" pattern="[0-9]{11}" maxlength="11"
                                required 
                                style="width:100%; padding:15px; border:1px solid #ccc; border-radius:10px; font-size: 16px; outline: none;">
                     </div>

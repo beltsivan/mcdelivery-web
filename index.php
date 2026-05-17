@@ -45,7 +45,7 @@ if ($hour >= 5 && $hour < 11) {
         // 3. Fetch ONLY products matching the current time category
         // Escaping $category for security
         $safe_category = mysqli_real_escape_string($conn, $category);
-        $query = "SELECT * FROM McdoMenuItem WHERE Menu_Category = '$safe_category' AND Menu_Available = 1";
+        $query = "SELECT * FROM McdoMenuItem WHERE Menu_Category = 'Dinner Specials' AND Menu_Available = 1";
         $result = mysqli_query($conn, $query);
 
         if (mysqli_num_rows($result) > 0) {
@@ -54,7 +54,7 @@ if ($hour >= 5 && $hour < 11) {
                 <a href="productdetails.php?id=<?php echo $row['Menu_MenuItemId']; ?>">
                     <div class="card">
                     <div class="card-image">
-                        <img src="<?php echo $row['Menu_ImageURL']; ?>" alt="Product">
+                        <img src="uploads/<?php echo htmlspecialchars($row['Menu_ImageURL']); ?>" alt="Product">
                     </div>
                     <div class="card-info">
                         <h3><?php echo $row['Menu_Name']; ?></h3>
@@ -149,7 +149,7 @@ if ($hour >= 5 && $hour < 11) {
         <a href="productdetails.php?id=<?php echo $row['Menu_MenuItemId']; ?>">
             <div class="card">
                 <div class="card-image">
-                    <img src="<?php echo $row['Menu_ImageURL']; ?>" alt="Exclusive Product">
+                    <img src="uploads/<?php echo htmlspecialchars($row['Menu_ImageURL']); ?>" alt="Exclusive Product">
                 </div>
                 <div class="card-info">
                     <h3><?php echo $row['Menu_Name']; ?></h3>
@@ -184,7 +184,7 @@ if (mysqli_num_rows($featured_result) > 0) {
         <a href="productdetails.php?id=<?php echo $row['Menu_MenuItemId']; ?>">
             <div class="card">
             <div class="card-image">
-                <img src="<?php echo $row['Menu_ImageURL']; ?>" alt="Featured Item">
+                <img src="uploads/<?php echo htmlspecialchars($row['Menu_ImageURL']); ?>" alt="Featured Item">
             </div>
             <div class="card-info">
                 <h3><?php echo $row['Menu_Name']; ?></h3>
