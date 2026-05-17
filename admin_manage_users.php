@@ -9,6 +9,13 @@
             $lname = trim($_POST['lname']);
             $email = trim($_POST['email']);
             $phone = trim($_POST['phone']);
+            $phone_clean = preg_replace('/[^0-9]/', '', $phone);
+            if (strlen($phone_clean) === 0) {
+                $phone_clean = null;
+            } elseif (strlen($phone_clean) !== 11) {
+                echo '<div class="alert-success" style="background:#f8d7da;color:#721c24;">Phone number must be exactly 11 digits.</div>';
+                $phone_clean = null;
+            }
             $password = $_POST['password'];
             $role = $_POST['role'];
             $branchId = !empty($_POST['branch_id']) ? (int) $_POST['branch_id'] : null;
@@ -23,7 +30,7 @@
                     echo '<div class="alert-success" style="background:#f8d7da;color:#721c24;">Email already exists.</div>';
                 } else {
                     $stmt = mysqli_prepare($conn, "INSERT INTO staff (Staff_Brnch_Id, Staff_Role, Staff_FName, Staff_LName, Staff_Phone, Staff_Email, Staff_Password) VALUES (?, ?, ?, ?, ?, ?, ?)");
-                    mysqli_stmt_bind_param($stmt, "issssss", $branchId, $role, $fname, $lname, $phone, $email, $password);
+                    mysqli_stmt_bind_param($stmt, "issssss", $branchId, $role, $fname, $lname, $phone_clean, $email, $password);
                     if (mysqli_stmt_execute($stmt)) {
                         echo '<div class="alert-success">Staff added successfully!</div>';
                     } else {
@@ -56,7 +63,7 @@
                 <input type="text" name="lname" placeholder="Last Name" style="flex:1;">
             </div>
             <input type="email" name="email" placeholder="Email" required>
-            <input type="text" name="phone" placeholder="Phone (e.g. 09123456789)">
+            <input type="text" name="phone" placeholder="Phone (e.g. 09123456789)" inputmode="numeric" pattern="[0-9]{11}" maxlength="11">
             <input type="password" name="password" placeholder="Password" required>
             <select name="role" required>
                 <option value="">-- Select Role --</option>

@@ -1,40 +1,14 @@
 <div class="product-panel-container">
-    <div class="add-product-card">
-        <h3>Add New Menu Item</h3>
-        <form action="admin_dashboard.php?page=products" method="POST" enctype="multipart/form-data">
-            <input type="text" name="Menu_Name" placeholder="Product Name" required>
-            <textarea name="Menu_Description" placeholder="Description"></textarea>
-            <input type="number" step="0.01" name="Menu_Price" placeholder="Price" required>
-            
-            <select name="Menu_Category">
-                <option value="Breakfast">Breakfast</option>
-                <option value="Regular Menu">Regular Menu</option>
-                <option value="Dinner Specials">Dinner Specials</option>
-                <option value="Featured">Featured</option>
-                <option value="Group Meals">Group Meals</option>
-                <option value="Chicken">Chicken</option>
-                <option value="Burgers">Burgers</option>
-                <option value="McSpaghetti">McSpaghetti</option>
-                <option value="Desserts & Drinks">Desserts & Drinks</option>
-                <option value="McCafe">McCafe</option>
-                <option value="Fries & Extras">Fries & Extras</option>
-                <option value="Happy Meal">Happy Meal</option>
-                <option value="Sulit Busog Meals">Sulit Busog Meals</option>
-            </select>
-
-            <label>Product Image:</label>
-            <input type="file" name="Menu_Image" required>
-
-            <button type="submit" name="mcdomenuitem" class="btn-primary">
-                Upload Product
-            </button>
-        </form>
-    </div>
-
     <div class="display-products-card">
-        <h3>Current Menu Items</h3>
-        <input type="text" id="menuSearch" onkeyup="filterMenuItems()" placeholder="Search menu items..." style="width:100%;padding:10px;margin-bottom:12px;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;">
-        <div style="max-height:500px;overflow-y:auto;">
+        <div class="card-header">
+            <h3>Current Menu Items</h3>
+            <span class="item-count"><?php echo mysqli_num_rows($all_items); ?> items</span>
+        </div>
+        <div class="search-bar">
+            <span class="search-icon">&#128269;</span>
+            <input type="text" id="menuSearch" onkeyup="filterMenuItems()" placeholder="Search menu items...">
+        </div>
+        <div class="table-wrap">
         <table class="menu-table">
             <thead>
                 <tr>
@@ -46,7 +20,7 @@
             </thead>
             <tbody id="menuTableBody">
                 <?php while($row = mysqli_fetch_assoc($all_items)): ?>
-                <tr>
+                <tr class="clickable-row" onclick="openProductModal(<?php echo htmlspecialchars(json_encode($row)); ?>)">
                     <td class="item-name"><?php echo htmlspecialchars($row['Menu_Name']); ?></td>
                     <td>
                         <span class="category-badge">
@@ -54,22 +28,64 @@
                         </span>
                     </td>
                     <td class="item-price">₱<?php echo number_format($row['Menu_Price'], 2); ?></td>
-                    <td class="item-actions">
-                        <button class="btn-edit" onclick="openEditModal(<?php echo htmlspecialchars(json_encode($row)); ?>)">
-                        Edit
-                    </button>
+                    <td class="item-actions" onclick="event.stopPropagation();">
+                        <button class="btn-edit" onclick="openEditModal(<?php echo htmlspecialchars(json_encode($row)); ?>)">Edit</button>
                         <a href="admin_dashboard.php?page=products&delete_id=<?php echo $row['Menu_MenuItemId']; ?>" 
    onclick="return confirm('Are you sure you want to delete this item?');" 
-   class="btn-delete">
-   Delete
-</a>
+   class="btn-delete">Delete</a>
                     </td>
                 </tr>
                 <?php endwhile; ?>
             </tbody>
         </table>
         </div>
+        <div class="add-bottom" onclick="openAddModal()">
+            <span class="add-bottom-icon">+</span>
+            <span>Add New Item</span>
+        </div>
     </div>
+    <!-- Add Item Modal -->
+    <div id="addModal" class="modal-overlay">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeAddModal()">&times;</span>
+            <h3>Add New Menu Item</h3>
+            <hr>
+            <form action="admin_dashboard.php?page=products" method="POST" enctype="multipart/form-data">
+                <label>Product Name</label>
+                <input type="text" name="Menu_Name" placeholder="Product Name" required>
+
+                <label>Description</label>
+                <textarea name="Menu_Description" placeholder="Description"></textarea>
+
+                <label>Price (₱)</label>
+                <input type="number" step="0.01" name="Menu_Price" placeholder="Price" required>
+
+                <label>Category</label>
+                <select name="Menu_Category" required>
+                    <option value="" disabled selected>-- Select a Category --</option>
+                    <option value="Breakfast">Breakfast</option>
+                    <option value="Regular Menu">Regular Menu</option>
+                    <option value="Dinner Specials">Dinner Specials</option>
+                    <option value="Featured">Featured</option>
+                    <option value="Group Meals">Group Meals</option>
+                    <option value="Chicken">Chicken</option>
+                    <option value="Burgers">Burgers</option>
+                    <option value="McSpaghetti">McSpaghetti</option>
+                    <option value="Desserts & Drinks">Desserts & Drinks</option>
+                    <option value="McCafe">McCafe</option>
+                    <option value="Fries & Extras">Fries & Extras</option>
+                    <option value="Happy Meal">Happy Meal</option>
+                    <option value="Sulit Busog Meals">Sulit Busog Meals</option>
+                </select>
+
+                <label>Product Image:</label>
+                <input type="file" name="Menu_Image" required>
+
+                <button type="submit" name="mcdomenuitem" class="btn-admin">Upload Product</button>
+            </form>
+        </div>
+    </div>
+
     <div id="editModal" class="modal-overlay">
     <div class="modal-content">
         <span class="close-btn" onclick="closeModal()">&times;</span>
@@ -90,6 +106,8 @@
             <label>Category</label>
             <select name="Menu_Category" id="edit_category" required>
                 <option value="" disabled selected>-- Select a Category --</option>
+                <option value="Exclusives">Exclusives</option>
+                <option value="Dinner Specials">Home Page Offer</option>
                 <option value="Featured">Featured</option>
                 <option value="Group Meals">Group Meals</option>
                 <option value="Chicken">Chicken</option>
@@ -114,7 +132,23 @@
 </div>
 </div>
 
+<!-- Product Detail Modal -->
+<div id="productModal" class="modal-overlay">
+    <div class="modal-content modal-lg">
+        <span class="close-btn" onclick="closeProductModal()">&times;</span>
+        <div id="productModalBody"></div>
+    </div>
+</div>
+
 <script>
+function openAddModal() {
+    document.getElementById('addModal').style.display = 'block';
+}
+
+function closeAddModal() {
+    document.getElementById('addModal').style.display = 'none';
+}
+
 function filterMenuItems() {
     var input = document.getElementById('menuSearch');
     var filter = input.value.toLowerCase();
@@ -147,10 +181,44 @@ function closeModal() {
     document.getElementById('editModal').style.display = 'none';
 }
 
+function openProductModal(item) {
+    var imgHtml = item.Menu_ImageURL ? '<img src="uploads/' + item.Menu_ImageURL + '" class="product-modal-img">' : '<div class="product-modal-img-placeholder">No Image</div>';
+    var available = item.Menu_Available == 1 ? '<span class="badge status-completed">Available</span>' : '<span class="badge status-cancelled">Unavailable</span>';
+
+    var html =
+        '<div class="product-detail">' +
+            imgHtml +
+            '<div class="product-detail-info">' +
+                '<h3>' + item.Menu_Name + '</h3>' +
+                '<span class="category-badge" style="margin-bottom:12px;display:inline-block;">' + item.Menu_Category + '</span>' +
+                '<p class="product-detail-desc">' + (item.Menu_Description || 'No description available.') + '</p>' +
+                '<div class="product-detail-price">₱' + parseFloat(item.Menu_Price).toFixed(2) + '</div>' +
+                '<div style="margin-top:10px;">' + available + '</div>' +
+                '<div class="product-detail-actions">' +
+                    '<button class="btn-edit" onclick="closeProductModal();openEditModal(' + JSON.stringify(item).replace(/"/g, '&quot;') + ')">Edit</button>' +
+                    '<a href="admin_dashboard.php?page=products&delete_id=' + item.Menu_MenuItemId + '" onclick="return confirm(\'Are you sure you want to delete this item?\');" class="btn-delete">Delete</a>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+
+    document.getElementById('productModalBody').innerHTML = html;
+    document.getElementById('productModal').style.display = 'block';
+}
+
+function closeProductModal() {
+    document.getElementById('productModal').style.display = 'none';
+}
+
 // Close if clicking outside the box
 window.onclick = function(event) {
     if (event.target == document.getElementById('editModal')) {
         closeModal();
+    }
+    if (event.target == document.getElementById('addModal')) {
+        closeAddModal();
+    }
+    if (event.target == document.getElementById('productModal')) {
+        closeProductModal();
     }
 }
 </script>

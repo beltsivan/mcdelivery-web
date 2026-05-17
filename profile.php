@@ -59,11 +59,6 @@ $user = $stmt->get_result()->fetch_assoc();
                         <input type="email" value="<?php echo $user['Cust_Email']; ?>" readonly style="color: #aaa;">
                     </div>
 
-                    <div class="form-group">
-                        <label>Date of birth</label>
-                        <input type="date" name="dob" placeholder="mm/dd/yyyy">
-                    </div>
-
                     <button type="submit" class="btn-save">Save</button>
                     <a href="#" class="change-pass">Change Password</a>
                 </form>

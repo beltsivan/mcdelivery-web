@@ -73,9 +73,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['address_id'])) {
             <label style="display:block;padding:8px 0;"><input type="radio" name="payment_method" value="GCash"> GCash</label>
             <label style="display:block;padding:8px 0;"><input type="radio" name="payment_method" value="Bank Transfer"> Bank Transfer</label>
 
-            <button type="submit" class="btn-create" style="margin-top:20px;">Place Order</button>
+            <button type="submit" class="btn-create" style="margin-top:20px;" onmouseover="this.style.backgroundColor='#ffbc0d'; this.style.color='black';"
+  onmouseout="this.style.backgroundColor=''; this.style.color='';">Place Order</button>
+            
         </form>
     </div>
 </div>
 </body>
 <?php include('includes/footer.php'); ?>
+
