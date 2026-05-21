@@ -15,7 +15,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         if (password_verify($password, $user['Cust_Password'])) {
             $_SESSION['Cust_Id'] = $user['Cust_Id'];
             $_SESSION['Cust_FName'] = $user['Cust_FName'];
-            header("Location: index.php");
+            header("Location: branch_select.php");
             exit();
         } else {
             $_SESSION['login_error'] = "Wrong password.";

@@ -29,6 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['Staff_LName'] = $staff['Staff_LName'];
             $_SESSION['Staff_Role'] = $staff['Staff_Role'];
             $_SESSION['Staff_Email'] = $staff['Staff_Email'];
+            $_SESSION['Staff_Brnch_Id'] = $staff['Staff_Brnch_Id'] ? (int) $staff['Staff_Brnch_Id'] : null;
 
             header('Location: admin_dashboard.php');
             exit;

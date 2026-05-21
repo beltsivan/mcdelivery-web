@@ -82,7 +82,12 @@
         }
     }
 
-    $orders = mcd_get_kitchen_orders($conn, $filter);
+    $branchFilter = null;
+    if ($staffRole !== 'Admin' && isset($_SESSION['Staff_Brnch_Id'])) {
+        $branchFilter = (int) $_SESSION['Staff_Brnch_Id'];
+    }
+
+    $orders = mcd_get_kitchen_orders($conn, $filter, $branchFilter);
     ?>
 
     <div class="orders-tabs">
