@@ -10,7 +10,7 @@ $orderId = isset($_GET['order_id']) ? (int) $_GET['order_id'] : 0;
 
 $order = null;
 if ($orderId > 0 && isset($_SESSION['Cust_Id'])) {
-    $stmt = mysqli_prepare($conn, "SELECT * FROM mcorder WHERE Order_Id = ? AND Order_Cust_Id = ?");
+    $stmt = mysqli_prepare($conn, "SELECT o.*, b.Brnch_Name, b.Brnch_Street, b.Brnch_City FROM mcorder o LEFT JOIN mcbranch b ON b.Brnch_Id = o.Order_Brnch_Id WHERE o.Order_Id = ? AND o.Order_Cust_Id = ?");
     mysqli_stmt_bind_param($stmt, "ii", $orderId, $_SESSION['Cust_Id']);
     mysqli_stmt_execute($stmt);
     $result = mysqli_stmt_get_result($stmt);
@@ -31,6 +31,11 @@ unset($_SESSION['order_success']);
                 Your order #<?php echo $orderId; ?> has been placed successfully.
             </p>
             <?php if ($order): ?>
+                <?php if (!empty($order['Brnch_Name'])): ?>
+                <p style="color: #777;font-size:13px;background:#fff8e1;display:inline-block;padding:6px 16px;border-radius:20px;">
+                    &#127963; <?php echo htmlspecialchars($order['Brnch_Name'] . ' - ' . ($order['Brnch_Street'] ?? '') . ', ' . ($order['Brnch_City'] ?? '')); ?>
+                </p>
+                <?php endif; ?>
                 <p style="color: #777;">Total: <strong>₱<?php echo number_format($order['Order_TotalAmount'], 2); ?></strong></p>
                 <p style="color: #777;">Status: <strong><?php echo htmlspecialchars($order['Order_Status']); ?></strong></p>
             <?php endif; ?>

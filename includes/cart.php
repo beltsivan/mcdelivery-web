@@ -192,7 +192,7 @@ function mcd_get_payment_info($conn, $orderId) {
     return $payment;
 }
 
-function mcd_checkout($conn, $custId, $addressId, $paymentMethod = 'Cash on Delivery') {
+function mcd_checkout($conn, $custId, $addressId, $paymentMethod = 'Cash on Delivery', $branchId = null) {
     $cartItems = mcd_get_customer_bag_items($conn, $custId);
 
     if (empty($cartItems)) {
@@ -210,13 +210,13 @@ function mcd_checkout($conn, $custId, $addressId, $paymentMethod = 'Cash on Deli
     $deliveryFee = 49;
     $grandTotal = $subtotal + $deliveryFee;
 
-    $stmt = mysqli_prepare($conn, "INSERT INTO mcorder (Order_Cust_Id, Order_OrderDate, Order_Status, Order_TotalAmount, Order_Quantity, Order_DeliveryFee, Order_Add_Id) VALUES (?, NOW(), 'Pending', ?, ?, ?, ?)");
+    $stmt = mysqli_prepare($conn, "INSERT INTO mcorder (Order_Cust_Id, Order_OrderDate, Order_Status, Order_TotalAmount, Order_Quantity, Order_DeliveryFee, Order_Add_Id, Order_Brnch_Id) VALUES (?, NOW(), 'Pending', ?, ?, ?, ?, ?)");
 
     if (!$stmt) {
         return false;
     }
 
-    mysqli_stmt_bind_param($stmt, "iddii", $custId, $grandTotal, $totalQuantity, $deliveryFee, $addressId);
+    mysqli_stmt_bind_param($stmt, "iddiii", $custId, $grandTotal, $totalQuantity, $deliveryFee, $addressId, $branchId);
     $orderCreated = mysqli_stmt_execute($stmt);
     $orderId = mysqli_stmt_insert_id($stmt);
     mysqli_stmt_close($stmt);
@@ -276,17 +276,37 @@ function mcd_get_order_items($conn, $orderId) {
     return $items;
 }
 
-function mcd_get_kitchen_orders($conn, $statusFilter = null) {
+function mcd_get_kitchen_orders($conn, $statusFilter = null, $branchId = null) {
     $orders = [];
     $sql = "SELECT o.*, c.Cust_FName, c.Cust_LName, a.Add_Street, a.Add_Barangay, a.Add_City, a.Add_Municipality, a.Add_PostalCode FROM mcorder o INNER JOIN customer c ON c.Cust_Id = o.Order_Cust_Id LEFT JOIN address a ON a.Add_Id = o.Order_Add_Id";
+
+    $conditions = [];
+    $params = [];
+    $types = '';
 
     if ($statusFilter) {
         if (is_array($statusFilter)) {
             $placeholders = implode(',', array_fill(0, count($statusFilter), '?'));
-            $sql .= " WHERE o.Order_Status IN ($placeholders)";
+            $conditions[] = "o.Order_Status IN ($placeholders)";
+            foreach ($statusFilter as $sf) {
+                $params[] = $sf;
+                $types .= 's';
+            }
         } else {
-            $sql .= " WHERE o.Order_Status = ?";
+            $conditions[] = "o.Order_Status = ?";
+            $params[] = $statusFilter;
+            $types .= 's';
         }
+    }
+
+    if ($branchId !== null) {
+        $conditions[] = "o.Order_Brnch_Id = ?";
+        $params[] = $branchId;
+        $types .= 'i';
+    }
+
+    if (!empty($conditions)) {
+        $sql .= " WHERE " . implode(" AND ", $conditions);
     }
 
     $sql .= " ORDER BY o.Order_OrderDate DESC";
@@ -297,13 +317,8 @@ function mcd_get_kitchen_orders($conn, $statusFilter = null) {
         return $orders;
     }
 
-    if ($statusFilter) {
-        if (is_array($statusFilter)) {
-            $types = str_repeat('s', count($statusFilter));
-            mysqli_stmt_bind_param($stmt, $types, ...$statusFilter);
-        } else {
-            mysqli_stmt_bind_param($stmt, "s", $statusFilter);
-        }
+    if (!empty($params)) {
+        mysqli_stmt_bind_param($stmt, $types, ...$params);
     }
 
     mysqli_stmt_execute($stmt);
@@ -375,7 +390,7 @@ function mcd_update_order_status($conn, $orderId, $newStatus) {
 
 function mcd_get_customer_orders($conn, $custId) {
     $orders = [];
-    $stmt = mysqli_prepare($conn, "SELECT o.*, (SELECT Dlvry_StatusUpdate FROM mcdeliverystatus WHERE Dlvry_Order_Id = o.Order_Id ORDER BY Dlvry_DateTime DESC LIMIT 1) AS LatestStatus FROM mcorder o WHERE o.Order_Cust_Id = ? ORDER BY o.Order_OrderDate DESC");
+    $stmt = mysqli_prepare($conn, "SELECT o.*, b.Brnch_Name, b.Brnch_Street, b.Brnch_Barangay, b.Brnch_City, b.Brnch_Municipality, b.Brnch_PostalCode, (SELECT Dlvry_StatusUpdate FROM mcdeliverystatus WHERE Dlvry_Order_Id = o.Order_Id ORDER BY Dlvry_DateTime DESC LIMIT 1) AS LatestStatus FROM mcorder o LEFT JOIN mcbranch b ON b.Brnch_Id = o.Order_Brnch_Id WHERE o.Order_Cust_Id = ? ORDER BY o.Order_OrderDate DESC");
 
     if (!$stmt) {
         return $orders;

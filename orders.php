@@ -76,6 +76,18 @@ $orders = mcd_get_customer_orders($conn, $custId);
                 </div>
             </div>
 
+            <?php if (!empty($order['Brnch_Name'])): ?>
+                <div style="font-size:13px;color:#666;margin-top:10px;padding:8px 12px;background:#fff8e1;border-radius:8px;display:inline-block;">
+                    &#127963; <?php echo htmlspecialchars($order['Brnch_Name']); ?>
+                    <?php
+                    $bAddr = [];
+                    if (!empty($order['Brnch_Street'])) $bAddr[] = $order['Brnch_Street'];
+                    if (!empty($order['Brnch_City'])) $bAddr[] = $order['Brnch_City'];
+                    if ($bAddr) echo ' - ' . htmlspecialchars(implode(', ', $bAddr));
+                    ?>
+                </div>
+            <?php endif; ?>
+
             <div class="ord-items">
                 <?php foreach ($order['items'] as $item): ?>
                     <div class="ord-item">

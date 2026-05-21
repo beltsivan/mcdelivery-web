@@ -1,6 +1,7 @@
 -- 1. McBranch
 CREATE TABLE McBranch (
     Brnch_Id INT AUTO_INCREMENT PRIMARY KEY,
+    Brnch_Name VARCHAR(255) NOT NULL,
     Brnch_Street VARCHAR(255),
     Brnch_Barangay VARCHAR(255),
     Brnch_City VARCHAR(255),
@@ -123,3 +124,9 @@ CREATE TABLE Payment (
     Pay_TransactionDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (Pay_Order_Id) REFERENCES McOrder(Order_Id)
 );
+
+
+-- 1. Add branch column to orders table
+ALTER TABLE mcorder ADD COLUMN Order_Brnch_Id INT NULL AFTER Order_Add_Id;
+-- 2. Convert non-system-admin Admin accounts to Manager role
+UPDATE staff SET Staff_Role = 'Manager' WHERE Staff_Email != 'admin@gmail.com' AND Staff_Role = 'Admin';

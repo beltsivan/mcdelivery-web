@@ -53,11 +53,18 @@ if (isset($_SESSION['Cust_Id'])) {
         </div>
 
         <nav>
+            <?php if (isset($_SESSION['Cust_Brnch_Id'])): ?>
+                <a href="branch_select.php" style="font-size:12px;color:#000000;text-decoration:none;font-weight:bold;white-space:nowrap;">
+                   📍  <?php echo htmlspecialchars($_SESSION['Cust_Brnch_Name'] ?? 'Branch'); ?>
+                </a>
+                <?php endif; ?>
             <a href="index.php">Home</a>
             <a href="menu.php">Menu</a>
             <a href="orders.php">Orders</a>
+            <span style="font-weight: bold;">|</span>
 
             <?php if (isset($_SESSION['Cust_Id'])): ?>
+                
                 <div class="account-dropdown">
                     <button class="dropbtn">My Account</button>
                     <div class="dropdown-content">

@@ -10,13 +10,28 @@ include('config/db.php');
 require_once('includes/cart.php');
 
 $staffRole = $_SESSION['Staff_Role'] ?? 'Staff';
+$isSystemAdmin = isset($_SESSION['Staff_Email']) && $_SESSION['Staff_Email'] === 'admin@gmail.com';
+
+// Fetch branch name for manager/staff
+$staffBranchName = '';
+if (isset($_SESSION['Staff_Brnch_Id'])) {
+    $bRes = mysqli_query($conn, "SELECT Brnch_Name FROM mcbranch WHERE Brnch_Id = " . (int) $_SESSION['Staff_Brnch_Id']);
+    $bRow = mysqli_fetch_assoc($bRes);
+    $staffBranchName = $bRow['Brnch_Name'] ?? '';
+}
 
 // Determine current page
 $page = $_GET['page'] ?? 'overview';
 
-// If kitchen staff, default to orders page
-if ($staffRole !== 'Admin' && !isset($_GET['page'])) {
-    $page = 'orders';
+// Set default page based on role
+if (!isset($_GET['page'])) {
+    if ($isSystemAdmin) {
+        $page = 'branches';
+    } elseif ($staffRole === 'Manager') {
+        $page = 'overview';
+    } elseif (in_array($staffRole, ['Kitchen Staff', 'Rider'])) {
+        $page = 'orders';
+    }
 }
 // Processing Logic for Products
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['mcdomenuitem'])) {
@@ -95,12 +110,19 @@ if (isset($_GET['delete_id'])) {
 <div class="admin-container">       
     <aside class="admin-sidebar">                                                                      
         <div class="admin-logo">McDelivery Admin</div>
+        <?php if ($staffBranchName): ?>
+            <div style="padding: 8px 20px; font-size: 12px; color: #ffbc0d; border-bottom: 1px solid rgba(255,255,255,0.08);">
+                &#127963; <?php echo htmlspecialchars($staffBranchName); ?>
+            </div>
+        <?php endif; ?>
         <nav class="admin-nav" id="adminNav">
-            <?php if ($staffRole === 'Admin'): ?>
-                <a href="admin_dashboard.php?page=overview"<?php if ($page === 'overview') echo ' class="active"'; ?>>Overview</a>
-                <a href="admin_dashboard.php?page=products"<?php if ($page === 'products') echo ' class="active"'; ?>>Manage Products</a>
-                <a href="admin_dashboard.php?page=orders"<?php if ($page === 'orders') echo ' class="active"'; ?>>Orders</a>
+            <?php if ($isSystemAdmin): ?>
+                <a href="admin_dashboard.php?page=branches"<?php if ($page === 'branches') echo ' class="active"'; ?>>Manage Branches</a>
+                <a href="admin_dashboard.php?page=managers"<?php if ($page === 'managers') echo ' class="active"'; ?>>Manage Managers</a>
+            <?php elseif ($staffRole === 'Manager'): ?>
+                <a href="admin_dashboard.php?page=overview"<?php if ($page === 'overview') echo ' class="active"'; ?>><?php echo htmlspecialchars($staffBranchName ?: 'Dashboard'); ?></a>
                 <a href="admin_dashboard.php?page=staff"<?php if ($page === 'staff') echo ' class="active"'; ?>>Manage Staff</a>
+                <a href="admin_dashboard.php?page=orders"<?php if ($page === 'orders') echo ' class="active"'; ?>>Orders</a>
             <?php else: ?>
                 <a href="admin_dashboard.php?page=orders"<?php if ($page === 'orders') echo ' class="active"'; ?>>Orders</a>
             <?php endif; ?>
@@ -113,15 +135,103 @@ if (isset($_GET['delete_id'])) {
             <div class="alert-success"><?php echo $msg; ?></div>
         <?php endif; ?>
         
-        <?php 
+        <?php
+            $branchId = isset($_SESSION['Staff_Brnch_Id']) ? (int) $_SESSION['Staff_Brnch_Id'] : null;
+
             if ($page == 'products') {
                 $all_items = mysqli_query($conn, "SELECT * FROM mcdomenuitem ORDER BY Menu_Category ASC");
                 include 'admin_add_products.php';
+            } elseif ($page == 'branches') {
+                include 'admin_manage_users.php';
+            } elseif ($page == 'managers') {
+                include 'admin_manage_managers.php';
             } elseif ($page == 'staff') {
                 include 'admin_manage_users.php';
             } elseif ($page == 'orders') {
                 include 'admin_kitchen_orders.php';
-            } else {
+            } elseif ($page == 'overview' && $staffRole === 'Manager' && $branchId) {
+                // Manager branch dashboard
+                $branchInfo = mysqli_fetch_assoc(mysqli_query($conn, "SELECT * FROM mcbranch WHERE Brnch_Id = $branchId"));
+                $totalBranchOrders = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) AS c FROM mcorder WHERE Order_Brnch_Id = $branchId"))['c'];
+                $pendingBranchOrders = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) AS c FROM mcorder WHERE Order_Brnch_Id = $branchId AND Order_Status = 'Pending'"))['c'];
+                $preparingBranchOrders = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) AS c FROM mcorder WHERE Order_Brnch_Id = $branchId AND Order_Status = 'Preparing'"))['c'];
+                $readyBranchOrders = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) AS c FROM mcorder WHERE Order_Brnch_Id = $branchId AND Order_Status = 'Ready'"))['c'];
+                $completedBranchOrders = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) AS c FROM mcorder WHERE Order_Brnch_Id = $branchId AND Order_Status = 'Completed'"))['c'];
+                $branchStaffCount = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) AS c FROM staff WHERE Staff_Brnch_Id = $branchId"))['c'];
+                $branchRevenue = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COALESCE(SUM(Order_TotalAmount), 0) AS t FROM mcorder WHERE Order_Brnch_Id = $branchId AND Order_Status = 'Completed'"))['t'];
+                ?>
+                <div class="overview-header">
+                    <div>
+                        <h1>&#127963; <?php echo htmlspecialchars($branchInfo['Brnch_Name'] ?? "Branch #$branchId"); ?></h1>
+                        <p>Welcome, <strong><?php echo htmlspecialchars($_SESSION['Staff_FName']); ?></strong></p>
+                        <?php
+                        $bAddr = [];
+                        if (!empty($branchInfo['Brnch_Street'])) $bAddr[] = $branchInfo['Brnch_Street'];
+                        if (!empty($branchInfo['Brnch_Barangay'])) $bAddr[] = 'Brgy. ' . $branchInfo['Brnch_Barangay'];
+                        if (!empty($branchInfo['Brnch_City'])) $bAddr[] = $branchInfo['Brnch_City'];
+                        if (!empty($branchInfo['Brnch_Municipality'])) $bAddr[] = $branchInfo['Brnch_Municipality'];
+                        if ($bAddr) echo '<p style="font-size:13px;color:#888;margin-top:4px;">' . htmlspecialchars(implode(', ', $bAddr)) . '</p>';
+                        ?>
+                    </div>
+                    <span class="role-badge"><?php echo htmlspecialchars($staffRole); ?></span>
+                </div>
+
+                <div class="stats-grid" style="grid-template-columns: repeat(4, 1fr);">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background:#fff3cd;">&#128203;</div>
+                        <div class="stat-info">
+                            <span class="stat-number"><?php echo $totalBranchOrders; ?></span>
+                            <span class="stat-label">Total Orders</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background:#cce5ff;">&#128100;</div>
+                        <div class="stat-info">
+                            <span class="stat-number"><?php echo $branchStaffCount; ?></span>
+                            <span class="stat-label">Staff</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background:#f8d7da;">&#9200;</div>
+                        <div class="stat-info">
+                            <span class="stat-number"><?php echo $pendingBranchOrders; ?></span>
+                            <span class="stat-label">Pending</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background:#007bff;color:white;">&#128260;</div>
+                        <div class="stat-info">
+                            <span class="stat-number"><?php echo $preparingBranchOrders; ?></span>
+                            <span class="stat-label">Preparing</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="stats-grid" style="grid-template-columns: repeat(3, 1fr);">
+                    <div class="stat-card order-stat">
+                        <div class="stat-dot" style="background:#28a745;"></div>
+                        <div class="stat-info">
+                            <span class="stat-number"><?php echo $readyBranchOrders; ?></span>
+                            <span class="stat-label">Ready</span>
+                        </div>
+                    </div>
+                    <div class="stat-card order-stat">
+                        <div class="stat-dot" style="background:#6c757d;"></div>
+                        <div class="stat-info">
+                            <span class="stat-number"><?php echo $completedBranchOrders; ?></span>
+                            <span class="stat-label">Completed</span>
+                        </div>
+                    </div>
+                    <div class="stat-card order-stat">
+                        <div class="stat-dot" style="background:#28a745;"></div>
+                        <div class="stat-info">
+                            <span class="stat-number">₱<?php echo number_format($branchRevenue, 2); ?></span>
+                            <span class="stat-label">Revenue</span>
+                        </div>
+                    </div>
+                </div>
+                <?php
+            } elseif ($page == 'overview') {
+                // System admin overview (global stats)
                 $totalProducts = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) AS c FROM mcdomenuitem"))['c'];
                 $totalOrders = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) AS c FROM mcorder"))['c'];
                 $totalCustomers = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) AS c FROM customer"))['c'];

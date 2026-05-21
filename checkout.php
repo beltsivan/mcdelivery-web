@@ -14,6 +14,17 @@ include('includes/header.php');
 
 $custId = (int) $_SESSION['Cust_Id'];
 
+// Check if customer selected a branch
+$selectedBranch = null;
+if (isset($_SESSION['Cust_Brnch_Id'])) {
+    $bStmt = mysqli_prepare($conn, "SELECT * FROM mcbranch WHERE Brnch_Id = ?");
+    mysqli_stmt_bind_param($bStmt, "i", $_SESSION['Cust_Brnch_Id']);
+    mysqli_stmt_execute($bStmt);
+    $bResult = mysqli_stmt_get_result($bStmt);
+    $selectedBranch = mysqli_fetch_assoc($bResult);
+    mysqli_stmt_close($bStmt);
+}
+
 // Check for addresses
 $addrResult = mysqli_query($conn, "SELECT * FROM Address WHERE Add_Cust_Id = $custId");
 $addresses = mysqli_fetch_all($addrResult, MYSQLI_ASSOC);
@@ -36,7 +47,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['address_id'])) {
     if (!$valid) {
         echo '<div class="error-banner">Invalid address selected.</div>';
     } else {
-        $orderId = mcd_checkout($conn, $custId, $addressId, $paymentMethod);
+        $branchId = isset($_SESSION['Cust_Brnch_Id']) ? (int) $_SESSION['Cust_Brnch_Id'] : null;
+        $orderId = mcd_checkout($conn, $custId, $addressId, $paymentMethod, $branchId);
 
         if ($orderId) {
             $_SESSION['order_success'] = $orderId;
@@ -56,6 +68,23 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['address_id'])) {
 
     <div class="reg-card">
         <form method="POST">
+            <?php if ($selectedBranch): ?>
+            <div style="background:#fff8e1;border:1px solid #ffbc0d;border-radius:10px;padding:14px 16px;margin-bottom:20px;">
+                <strong style="color:#292929;">&#127963; Ordering from: <?php echo htmlspecialchars($selectedBranch['Brnch_Name'] ?: $selectedBranch['Brnch_City'] . ' - ' . $selectedBranch['Brnch_Street']); ?></strong><br>
+                <span style="font-size:13px;color:#666;">
+                    <?php
+                    $bAddr = [];
+                    if (!empty($selectedBranch['Brnch_Street'])) $bAddr[] = $selectedBranch['Brnch_Street'];
+                    if (!empty($selectedBranch['Brnch_Barangay'])) $bAddr[] = 'Brgy. ' . $selectedBranch['Brnch_Barangay'];
+                    if (!empty($selectedBranch['Brnch_City'])) $bAddr[] = $selectedBranch['Brnch_City'];
+                    if (!empty($selectedBranch['Brnch_Municipality'])) $bAddr[] = $selectedBranch['Brnch_Municipality'];
+                    if (!empty($selectedBranch['Brnch_PostalCode'])) $bAddr[] = $selectedBranch['Brnch_PostalCode'];
+                    echo htmlspecialchars(implode(', ', $bAddr));
+                    ?>
+                </span>
+                <a href="branch_select.php" style="display:inline-block;margin-left:10px;font-size:12px;color:#DB0007;">Change</a>
+            </div>
+            <?php endif; ?>
             <h3 style="margin-bottom:15px;">Select Delivery Address</h3>
             <?php foreach ($addresses as $addr): ?>
                 <label style="display:block;border:2px solid #ddd;border-radius:10px;padding:15px;margin-bottom:10px;cursor:pointer;">
