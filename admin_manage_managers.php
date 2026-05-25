@@ -50,6 +50,45 @@
                 }
             }
 
+            // Handle edit manager
+            if (isset($_POST['edit_manager'])) {
+                $uid = $_POST['uid'];
+                $fname = trim($_POST['fname']);
+                $lname = trim($_POST['lname']);
+                $email = trim($_POST['email']);
+                $phone = trim($_POST['phone']);
+                $phone_clean = preg_replace('/[^0-9]/', '', $phone);
+                $password = $_POST['password'];
+                $branchId = !empty($_POST['branch_id']) ? $_POST['branch_id'] : null;
+
+                if ($fname && $email && $branchId) {
+                    try {
+                        $authProps = ['email' => $email];
+                        if (!empty($password)) {
+                            $authProps['password'] = $password;
+                        }
+                        $auth->updateUser($uid, $authProps);
+
+                        $updateData = [
+                            'Staff_FName' => $fname,
+                            'Staff_LName' => $lname,
+                            'Staff_Email' => $email,
+                            'Staff_Brnch_Id' => $branchId,
+                        ];
+                        if (strlen($phone_clean) === 11) {
+                            $updateData['Staff_Phone'] = $phone_clean;
+                        }
+
+                        $db->collection('staff')->document($uid)->set($updateData, ['merge' => true]);
+                        echo '<div class="alert-success">Manager updated successfully!</div>';
+                    } catch (\Exception $e) {
+                        echo '<div class="alert-success" style="background:#f8d7da;color:#721c24;">Error updating manager.</div>';
+                    }
+                } else {
+                    echo '<div class="alert-success" style="background:#f8d7da;color:#721c24;">First Name, Email, and Branch are required.</div>';
+                }
+            }
+
             // Handle delete manager
             if (isset($_GET['delete_manager_id'])) {
                 $deleteId = $_GET['delete_manager_id'];
@@ -143,6 +182,7 @@
                     <td><?php echo htmlspecialchars($mgr['Staff_Email'] ?? ''); ?></td>
                     <td><?php echo htmlspecialchars(($mgr['Brnch_Name'] ?? '') ? $mgr['Brnch_Name'] . ' - ' . ($mgr['Brnch_City'] ?? '') : ($mgr['Brnch_City'] ?? 'N/A')); ?></td>
                     <td class="item-actions">
+                        <a href="javascript:void(0)" onclick='openEditManagerModal(<?php echo json_encode($mgr, JSON_HEX_APOS); ?>)' class="btn-edit">Edit</a>
                         <a href="admin_dashboard.php?page=managers&delete_manager_id=<?php echo $mgr['Staff_Id']; ?>"
                            onclick="return confirm('Delete this manager?');"
                            class="btn-delete">Delete</a>
@@ -154,7 +194,48 @@
     </div>
 </div>
 
+<!-- Edit Manager Modal -->
+<div id="editManagerModal" class="modal-overlay">
+    <div class="modal-content">
+        <span class="close-btn" onclick="closeEditManagerModal()">&times;</span>
+        <h3>Edit Manager</h3>
+        <hr>
+        <form method="POST">
+            <input type="hidden" name="uid" id="edit_mgr_uid" value="">
+            <div style="display: flex; gap: 12px;">
+                <input type="text" name="fname" id="edit_mgr_fname" placeholder="First Name" required style="flex:1;">
+                <input type="text" name="lname" id="edit_mgr_lname" placeholder="Last Name" style="flex:1;">
+            </div>
+            <input type="email" name="email" id="edit_mgr_email" placeholder="Email" required>
+            <input type="text" name="phone" id="edit_mgr_phone" placeholder="Phone (e.g. 09123456789)" inputmode="numeric" pattern="[0-9]{11}" maxlength="11">
+            <input type="password" name="password" placeholder="New Password (leave blank to keep current)">
+            <select name="branch_id" id="edit_mgr_branch" required>
+                <option value="">-- Select Branch --</option>
+                <?php foreach ($branches as $branch): ?>
+                    <option value="<?php echo $branch['Brnch_Id']; ?>">
+                        <?php echo htmlspecialchars(($branch['Brnch_Name'] ? $branch['Brnch_Name'] . ' - ' : '') . $branch['Brnch_City'] . ' - ' . $branch['Brnch_Street']); ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+            <button type="submit" name="edit_manager" class="btn-admin">Update Manager</button>
+        </form>
+    </div>
+</div>
+
 <script>
+function openEditManagerModal(mgr) {
+    document.getElementById('edit_mgr_uid').value = mgr.Staff_Id || '';
+    document.getElementById('edit_mgr_fname').value = mgr.Staff_FName || '';
+    document.getElementById('edit_mgr_lname').value = mgr.Staff_LName || '';
+    document.getElementById('edit_mgr_email').value = mgr.Staff_Email || '';
+    document.getElementById('edit_mgr_phone').value = mgr.Staff_Phone || '';
+    document.getElementById('edit_mgr_branch').value = mgr.Staff_Brnch_Id || '';
+    document.getElementById('editManagerModal').style.display = 'block';
+}
+function closeEditManagerModal() {
+    document.getElementById('editManagerModal').style.display = 'none';
+}
+
 function filterManagers() {
     var input = document.getElementById('managerSearch');
     var filter = input.value.toLowerCase();

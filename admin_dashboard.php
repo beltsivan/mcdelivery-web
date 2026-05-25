@@ -125,9 +125,7 @@ if (isset($_GET['delete_id'])) {
                 <a href="admin_dashboard.php?page=overview"<?php if ($page === 'overview') echo ' class="active"'; ?>>Dashboard</a>
                 <a href="admin_dashboard.php?page=branches"<?php if ($page === 'branches') echo ' class="active"'; ?>>Manage Branches</a>
                 <a href="admin_dashboard.php?page=managers"<?php if ($page === 'managers') echo ' class="active"'; ?>>Manage Managers</a>
-                <a href="admin_dashboard.php?page=staff"<?php if ($page === 'staff') echo ' class="active"'; ?>>Manage Staff</a>
                 <a href="admin_dashboard.php?page=products"<?php if ($page === 'products') echo ' class="active"'; ?>>Manage Products</a>
-                <a href="admin_dashboard.php?page=orders"<?php if ($page === 'orders') echo ' class="active"'; ?>>Orders</a>
             <?php elseif ($staffRole === 'Manager'): ?>
                 <a href="admin_dashboard.php?page=overview"<?php if ($page === 'overview') echo ' class="active"'; ?>><?php echo htmlspecialchars($staffBranchName ?: 'Dashboard'); ?></a>
                 <a href="admin_dashboard.php?page=staff"<?php if ($page === 'staff') echo ' class="active"'; ?>>Manage Staff</a>
@@ -188,10 +186,12 @@ if (isset($_GET['delete_id'])) {
                 $readyBranchOrders = 0;
                 $completedBranchOrders = 0;
                 $branchRevenue = 0;
+                $branchOrdersData = [];
                 
                 foreach ($branchOrders as $ord) {
                     if (!$ord->exists()) continue;
                     $o = $ord->data();
+                    $o['Order_Id'] = $ord->id();
                     $totalBranchOrders++;
                     
                     $status = $o['Order_Status'] ?? '';
@@ -203,6 +203,27 @@ if (isset($_GET['delete_id'])) {
                             $completedBranchOrders++; 
                             $branchRevenue += (float) ($o['Order_TotalAmount'] ?? 0);
                             break;
+                    }
+                    
+                    $branchOrdersData[] = $o;
+                }
+                
+                // Sort by date descending
+                usort($branchOrdersData, function($a, $b) {
+                    $aTime = isset($a['Order_OrderDate']) ? (is_string($a['Order_OrderDate']) ? strtotime($a['Order_OrderDate']) : $a['Order_OrderDate']->get()->format('U')) : 0;
+                    $bTime = isset($b['Order_OrderDate']) ? (is_string($b['Order_OrderDate']) ? strtotime($b['Order_OrderDate']) : $b['Order_OrderDate']->get()->format('U')) : 0;
+                    return $bTime - $aTime;
+                });
+                
+                $branchOrdersData = array_slice($branchOrdersData, 0, 20);
+                
+                // Build items array for each order
+                $itemsByOrder = [];
+                foreach ($branchOrdersData as $ro) {
+                    $roItems = $ro['items'] ?? [];
+                    $itemsByOrder[$ro['Order_Id']] = [];
+                    foreach ($roItems as $item) {
+                        $itemsByOrder[$ro['Order_Id']][] = $item;
                     }
                 }
                 
@@ -282,6 +303,41 @@ if (isset($_GET['delete_id'])) {
                             <span class="stat-number">₱<?php echo number_format($branchRevenue, 2); ?></span>
                             <span class="stat-label">Revenue</span>
                         </div>
+                    </div>
+                </div>
+
+                <div class="overview-section">
+                    <div class="ov-header">
+                        <h2>Recent Orders</h2>
+                        <span class="item-count"><?php echo count($branchOrdersData); ?> orders</span>
+                    </div>
+                    <div class="ov-search">
+                        <span class="search-icon">&#128269;</span>
+                        <input type="text" id="ovSearch" onkeyup="filterOverview()" placeholder="Search by order # or customer name...">
+                    </div>
+                    <div class="ov-table-wrap">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Order #</th>
+                                <th>Customer</th>
+                                <th>Status</th>
+                                <th>Total</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ovTableBody">
+                            <?php foreach ($branchOrdersData as $ro): ?>
+                                <tr class="clickable-row" onclick="openOrderModal(<?php echo htmlspecialchars(json_encode($ro)); ?>, <?php echo htmlspecialchars(json_encode($itemsByOrder[$ro['Order_Id']] ?? [])); ?>)">
+                                    <td class="text-bold">#<?php echo $ro['Order_Id']; ?></td>
+                                    <td><?php echo htmlspecialchars(($ro['Cust_FName'] ?? '') . ' ' . ($ro['Cust_LName'] ?? '')); ?></td>
+                                    <td><span class="badge status-<?php echo strtolower($ro['Order_Status']); ?>"><?php echo htmlspecialchars($ro['Order_Status']); ?></span></td>
+                                    <td>₱<?php echo number_format($ro['Order_TotalAmount'], 2); ?></td>
+                                    <td><?php echo date('M d, Y - h:i A', strtotime($ro['Order_OrderDate'])); ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
                     </div>
                 </div>
                 <?php
@@ -438,15 +494,19 @@ if (isset($_GET['delete_id'])) {
                     </div>
                 </div>
 
-                <!-- Order Detail Modal -->
+                <?php
+            }
+
+            // Order Detail Modal — rendered once for all roles
+            if ($page === 'overview'):
+            ?>
                 <div id="orderModal" class="modal-overlay">
                     <div class="modal-content modal-lg">
                         <span class="close-btn" onclick="closeOrderModal()">&times;</span>
                         <div id="orderModalBody"></div>
                     </div>
                 </div>
-                <?php
-            }
+            <?php endif; ?>
         ?>
     </main>
 </div>

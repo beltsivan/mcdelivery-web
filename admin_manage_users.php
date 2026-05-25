@@ -143,6 +143,47 @@ if ($firebaseInitialized) {
                 }
             }
 
+            // Handle edit staff
+            if (isset($_POST['edit_staff'])) {
+                $uid = $_POST['uid'];
+                $fname = trim($_POST['fname']);
+                $lname = trim($_POST['lname']);
+                $email = trim($_POST['email']);
+                $phone = trim($_POST['phone']);
+                $phone_clean = preg_replace('/[^0-9]/', '', $phone);
+                $password = $_POST['password'];
+                $role = $_POST['role'];
+                $branchId = !empty($_POST['branch_id']) ? $_POST['branch_id'] : null;
+
+                if ($fname && $email && $role) {
+                    try {
+                        $authProps = ['email' => $email];
+                        if (!empty($password)) {
+                            $authProps['password'] = $password;
+                        }
+                        $auth->updateUser($uid, $authProps);
+
+                        $updateData = [
+                            'Staff_FName' => $fname,
+                            'Staff_LName' => $lname,
+                            'Staff_Email' => $email,
+                            'Staff_Role' => $role,
+                            'Staff_Brnch_Id' => $branchId,
+                        ];
+                        if (strlen($phone_clean) === 11) {
+                            $updateData['Staff_Phone'] = $phone_clean;
+                        }
+
+                        $db->collection('staff')->document($uid)->set($updateData, ['merge' => true]);
+                        echo '<div class="alert-success">Staff updated successfully!</div>';
+                    } catch (\Exception $e) {
+                        echo '<div class="alert-success" style="background:#f8d7da;color:#721c24;">Error updating staff.</div>';
+                    }
+                } else {
+                    echo '<div class="alert-success" style="background:#f8d7da;color:#721c24;">First Name, Email, and Role are required.</div>';
+                }
+            }
+
             // Handle delete staff
             if (isset($_GET['delete_staff_id'])) {
                 $deleteId = $_GET['delete_staff_id'];
@@ -245,6 +286,7 @@ if ($firebaseInitialized) {
                     <td><span class="category-badge"><?php echo htmlspecialchars($staff['Staff_Role'] ?? ''); ?></span></td>
                     <td><?php echo htmlspecialchars(($staff['Brnch_Name'] ?? '') ? $staff['Brnch_Name'] . ' - ' . ($staff['Brnch_City'] ?? '') : ($staff['Brnch_City'] ?? 'N/A')); ?></td>
                     <td class="item-actions">
+                        <a href="javascript:void(0)" onclick='openEditStaffModal(<?php echo json_encode($staff, JSON_HEX_APOS); ?>)' class="btn-edit">Edit</a>
                         <a href="admin_dashboard.php?page=staff&delete_staff_id=<?php echo $staff['Staff_Id']; ?>"
                            onclick="return confirm('Delete this staff member?');"
                            class="btn-delete">Delete</a>
@@ -253,6 +295,32 @@ if ($firebaseInitialized) {
                 <?php endforeach; ?>
             </tbody>
         </table>
+    </div>
+</div>
+
+<!-- Edit Staff Modal -->
+<div id="editStaffModal" class="modal-overlay">
+    <div class="modal-content">
+        <span class="close-btn" onclick="closeEditStaffModal()">&times;</span>
+        <h3>Edit Staff</h3>
+        <hr>
+        <form method="POST">
+            <input type="hidden" name="uid" id="edit_staff_uid" value="">
+            <div style="display: flex; gap: 12px;">
+                <input type="text" name="fname" id="edit_staff_fname" placeholder="First Name" required style="flex:1;">
+                <input type="text" name="lname" id="edit_staff_lname" placeholder="Last Name" style="flex:1;">
+            </div>
+            <input type="email" name="email" id="edit_staff_email" placeholder="Email" required>
+            <input type="text" name="phone" id="edit_staff_phone" placeholder="Phone (e.g. 09123456789)" inputmode="numeric" pattern="[0-9]{11}" maxlength="11">
+            <input type="password" name="password" placeholder="New Password (leave blank to keep current)">
+            <select name="role" id="edit_staff_role" required>
+                <option value="">-- Select Role --</option>
+                <option value="Kitchen Staff">Kitchen Staff</option>
+                <option value="Rider">Rider</option>
+            </select>
+            <input type="hidden" name="branch_id" id="edit_staff_branch" value="">
+            <button type="submit" name="edit_staff" class="btn-admin">Update Staff</button>
+        </form>
     </div>
 </div>
 <?php endif; ?>
@@ -361,6 +429,20 @@ if ($firebaseInitialized) {
 <?php endif; ?>
 
 <script>
+function openEditStaffModal(staff) {
+    document.getElementById('edit_staff_uid').value = staff.Staff_Id || '';
+    document.getElementById('edit_staff_fname').value = staff.Staff_FName || '';
+    document.getElementById('edit_staff_lname').value = staff.Staff_LName || '';
+    document.getElementById('edit_staff_email').value = staff.Staff_Email || '';
+    document.getElementById('edit_staff_phone').value = staff.Staff_Phone || '';
+    document.getElementById('edit_staff_role').value = staff.Staff_Role || '';
+    document.getElementById('edit_staff_branch').value = staff.Staff_Brnch_Id || '';
+    document.getElementById('editStaffModal').style.display = 'block';
+}
+function closeEditStaffModal() {
+    document.getElementById('editStaffModal').style.display = 'none';
+}
+
 function filterStaff() {
     var input = document.getElementById('staffSearch');
     var filter = input.value.toLowerCase();

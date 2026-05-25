@@ -17,10 +17,8 @@ if (!file_exists($firebaseCredentialsPath)) {
     die("Missing: config/firebase-credentials.json\n");
 }
 
-echo "=== McDelivery Admin Setup ===\n\n";
 
 // Initialize Firebase
-echo "Initializing Firebase... ";
 try {
     $scopes = ['https://www.googleapis.com/auth/cloud-platform'];
     $credentials = new ServiceAccountCredentials($scopes, $firebaseCredentialsPath);
@@ -71,11 +69,3 @@ $staffDoc->set([
     'Staff_Email' => $adminEmail,
 ]);
 
-echo "  Staff document created/updated with role: System Admin\n";
-
-echo "\n=== Setup Complete! ===\n";
-echo "Super Admin Credentials:\n";
-echo "  Email:    $adminEmail\n";
-echo "  Password: $adminPassword\n\n";
-echo "Login at: http://localhost/mcdelivery-web/staff_login.php\n";
-echo "Then you can manage branches, managers, products, and orders.\n";
