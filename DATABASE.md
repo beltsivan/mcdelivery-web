@@ -56,30 +56,16 @@ CREATE TABLE McdoMenuItem (
     Menu_Available BOOLEAN DEFAULT 1
 );
 
--- 9. McdoCoupon (Created before McOrder because of FK)
-CREATE TABLE McdoCoupon (
-    Coupn_Id INT AUTO_INCREMENT PRIMARY KEY,
-    Coupn_Code VARCHAR(50) UNIQUE,
-    Coupn_Description TEXT,
-    Coupn_DiscountValue DECIMAL(10,2),
-    Coupn_MinOrderAmount DECIMAL(10,2),
-    Coupn_MaxDiscount DECIMAL(10,2),
-    Coupn_ExpiryDate DATE,
-    Coupn_IsActive BOOLEAN DEFAULT 1
-);
-
 -- 7. McOrder
 CREATE TABLE McOrder (
     Order_Id INT AUTO_INCREMENT PRIMARY KEY,
     Order_Cust_Id INT,
-    Order_Coup_Id INT NULL,
     Order_OrderDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     Order_Status VARCHAR(50),
     Order_TotalAmount DECIMAL(10,2),
     Order_Quantity INT,
     Order_DeliveryFee DECIMAL(10,2),
-    FOREIGN KEY (Order_Cust_Id) REFERENCES Customer(Cust_Id),
-    FOREIGN KEY (Order_Coup_Id) REFERENCES McdoCoupon(Coupn_Id)
+    FOREIGN KEY (Order_Cust_Id) REFERENCES Customer(Cust_Id)
 );
 
 -- 6. CartItem

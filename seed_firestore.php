@@ -119,47 +119,6 @@ foreach ($menuItems as $item) {
     echo "  Created menu item: {$item['Menu_Name']} ({$item['Menu_Category']}) - ₱{$item['Menu_Price']}\n";
 }
 
-// ==================== COUPONS ====================
-echo "\n--- Coupons ---\n";
-$now = new DateTime();
-$coupons = [
-    [
-        'Coupn_Code' => 'FREESHIP50',
-        'Coupn_Description' => 'Free delivery on orders above ₱500',
-        'Coupn_DiscountValue' => 50.00,
-        'Coupn_MinOrderAmount' => 500.00,
-        'Coupn_MaxDiscount' => 50.00,
-        'Coupn_ExpiryDate' => (clone $now)->modify('+30 days')->format('Y-m-d\TH:i:s\Z'),
-        'Coupn_IsActive' => true,
-    ],
-    [
-        'Coupn_Code' => 'BURGER10',
-        'Coupn_Description' => '₱10 off any burger item',
-        'Coupn_DiscountValue' => 10.00,
-        'Coupn_MinOrderAmount' => 100.00,
-        'Coupn_MaxDiscount' => 10.00,
-        'Coupn_ExpiryDate' => (clone $now)->modify('+60 days')->format('Y-m-d\TH:i:s\Z'),
-        'Coupn_IsActive' => true,
-    ],
-    [
-        'Coupn_Code' => 'WELCOME20',
-        'Coupn_Description' => '₱20 off your first order',
-        'Coupn_DiscountValue' => 20.00,
-        'Coupn_MinOrderAmount' => 200.00,
-        'Coupn_MaxDiscount' => 20.00,
-        'Coupn_ExpiryDate' => (clone $now)->modify('+90 days')->format('Y-m-d\TH:i:s\Z'),
-        'Coupn_IsActive' => true,
-    ],
-];
-
-foreach ($coupons as $i => $coupon) {
-    $id = (string)($i + 1);
-    $docData = $coupon;
-    $docData['Coupn_Id'] = $id;
-    $db->collection('coupons')->document($id)->set($docData);
-    echo "  Created coupon: {$coupon['Coupn_Code']}\n";
-}
-
 // ==================== BRANCH STATS ====================
 echo "\n--- Branch Stats ---\n";
 foreach ($branches as $branch) {
@@ -180,6 +139,5 @@ echo "\n=== Seeding Complete! ===\n";
 echo "Populated:\n";
 echo "  - " . count($branches) . " branches\n";
 echo "  - " . count($menuItems) . " menu items\n";
-echo "  - " . count($coupons) . " coupons\n";
 echo "  - " . count($branches) . " branch stats\n";
 echo "\nYou can now use the app at http://localhost/mcdelivery-web/\n";

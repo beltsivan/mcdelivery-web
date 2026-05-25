@@ -121,26 +121,7 @@ while ($row = $result->fetch_assoc()) {
 }
 echo "  Total: $menuCount menu items migrated.\n";
 
-// ------------------ 3. MIGRATE COUPONS ------------------
-echo "\n--- Migrating Coupons ---\n";
-$result = $mysqli->query("SELECT * FROM McdoCoupon");
-$coupCount = 0;
-while ($row = $result->fetch_assoc()) {
-    $oldId = $row['Coupn_Id'];
-    $db->collection('coupons')->document((string) $oldId)->set([
-        'Coupn_Code' => $row['Coupn_Code'] ?? '',
-        'Coupn_Description' => $row['Coupn_Description'] ?? '',
-        'Coupn_DiscountValue' => (float) ($row['Coupn_DiscountValue'] ?? 0),
-        'Coupn_MinOrderAmount' => (float) ($row['Coupn_MinOrderAmount'] ?? 0),
-        'Coupn_MaxDiscount' => (float) ($row['Coupn_MaxDiscount'] ?? 0),
-        'Coupn_ExpiryDate' => $row['Coupn_ExpiryDate'] ?? null,
-        'Coupn_IsActive' => (bool) ($row['Coupn_IsActive'] ?? true),
-    ]);
-    $coupCount++;
-}
-echo "  Total: $coupCount coupons migrated.\n";
-
-// ------------------ 4. MIGRATE CUSTOMERS ------------------
+// ------------------ 3. MIGRATE CUSTOMERS ------------------
 echo "\n--- Migrating Customers ---\n";
 $result = $mysqli->query("SELECT * FROM Customer");
 $custCount = 0;
@@ -434,7 +415,6 @@ echo "\n=== Migration Complete ===\n";
 echo "Summary:\n";
 echo "  Branches:  $branchCount\n";
 echo "  Menu Items: $menuCount\n";
-echo "  Coupons:   $coupCount\n";
 echo "  Customers: $custCount\n";
 echo "  Staff:     $staffCount\n";
 echo "  Addresses: $addrCount\n";

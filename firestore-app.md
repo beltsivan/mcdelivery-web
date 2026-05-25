@@ -104,24 +104,7 @@ Auto-generated document ID.
 
 ---
 
-### 6. `coupons` → replaces `McdoCoupon` table
-
-Auto-generated document ID. *(Currently unused in code, but modeled.)*
-
-| Field | Type | MySQL Column |
-|-------|------|-------------|
-| `Coupn_Id` | string (doc ID) | Coupn_Id |
-| `Coupn_Code` | string | Coupn_Code |
-| `Coupn_Description` | string | Coupn_Description |
-| `Coupn_DiscountValue` | float | Coupn_DiscountValue |
-| `Coupn_MinOrderAmount` | float | Coupn_MinOrderAmount |
-| `Coupn_MaxDiscount` | float | Coupn_MaxDiscount |
-| `Coupn_ExpiryDate` | timestamp | Coupn_ExpiryDate |
-| `Coupn_IsActive` | bool | Coupn_IsActive |
-
----
-
-### 7. `customers/{uid}/cartItems` → subcollection replacing `CartItem` table
+### 6. `customers/{uid}/cartItems` → subcollection replacing `CartItem` table
 
 **Subcollection** under each customer document. Auto-generated document ID.
 
@@ -341,7 +324,7 @@ The **only exception** is the `items` array (from `orderitem` table) — it's ac
 The migration script (`migrate_to_firestore.php`) will:
 
 1. **Customers:** Read from MySQL → create in Firebase Auth → create doc in `customers` collection → build `old_Cust_Id → Firebase_UID` mapping
-2. **Branches, Menu Items, Coupons:** Read from MySQL → create docs in respective collections with old INT IDs as document ID strings
+2. **Branches, Menu Items:** Read from MySQL → create docs in respective collections with old INT IDs as document ID strings
 3. **Staff:** Read from MySQL → create in Firebase Auth → create `staff` doc
 4. **Addresses:** Replace `Add_Cust_Id` (INT) with Firebase UID using mapping
 5. **Cart Items:** Replace `Cart_Cust_Id` with Firebase UID, denormalize Menu_Name/ImageURL

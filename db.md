@@ -171,33 +171,6 @@ CREATE TABLE McdoMenuItem (
 
 ---
 
-### 6. McdoCoupon
-Stores discount coupons. *(Currently defined but not actively used by the application code.)*
-
-```sql
-CREATE TABLE McdoCoupon (
-    Coupn_Id INT AUTO_INCREMENT PRIMARY KEY,
-    Coupn_Code VARCHAR(50) UNIQUE,
-    Coupn_Description TEXT,
-    Coupn_DiscountValue DECIMAL(10,2),
-    Coupn_MinOrderAmount DECIMAL(10,2),
-    Coupn_MaxDiscount DECIMAL(10,2),
-    Coupn_ExpiryDate DATE,
-    Coupn_IsActive BOOLEAN DEFAULT 1
-);
-```
-
-| Column | Type | Description |
-|--------|------|-------------|
-| Coupn_Id | INT (AUTO_INCREMENT) | Primary Key |
-| Coupn_Code | VARCHAR(50) | Unique coupon code |
-| Coupn_Description | TEXT | Description |
-| Coupn_DiscountValue | DECIMAL(10,2) | Discount amount |
-| Coupn_MinOrderAmount | DECIMAL(10,2) | Minimum order to apply |
-| Coupn_MaxDiscount | DECIMAL(10,2) | Maximum discount cap |
-| Coupn_ExpiryDate | DATE | Expiration date |
-| Coupn_IsActive | BOOLEAN | 1 = active, 0 = inactive |
-
 ---
 
 ### 7. CartItem
@@ -243,7 +216,6 @@ CREATE TABLE McOrder (
     Order_DeliveryFee DECIMAL(10,2),
     Order_PrepTime INT,
     FOREIGN KEY (Order_Cust_Id) REFERENCES Customer(Cust_Id),
-    FOREIGN KEY (Order_Coup_Id) REFERENCES McdoCoupon(Coupn_Id),
     FOREIGN KEY (Order_Add_Id) REFERENCES Address(Add_Id)
 );
 ```
@@ -252,7 +224,6 @@ CREATE TABLE McOrder (
 |--------|------|-------------|
 | Order_Id | INT (AUTO_INCREMENT) | Primary Key |
 | Order_Cust_Id | INT | FK -> Customer.Cust_Id |
-| Order_Coup_Id | INT | FK -> McdoCoupon.Coupn_Id (nullable) |
 | Order_Add_Id | INT | FK -> Address.Add_Id (delivery address) |
 | Order_OrderDate | TIMESTAMP | Order placement date/time |
 | Order_Status | VARCHAR(50) | 'Pending', 'Preparing', 'Ready', 'Completed' |
@@ -373,7 +344,6 @@ Customer ────< CartItem
 Customer ────< McOrder
 McdoMenuItem ────< CartItem
 McdoMenuItem ────< orderitem
-McdoCoupon ────< McOrder
 Address ────< McOrder
 McOrder ────< orderitem
 McOrder ────< McDeliveryStatus
