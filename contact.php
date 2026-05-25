@@ -9,36 +9,34 @@ if (!isset($_SESSION['Cust_Id'])) {
 
 $cust_id = $_SESSION['Cust_Id'];
 $message = "";
+$current_num = "";
 
-// --- UPDATE LOGIC ---
-if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_contact'])) {
-    $new_num = $_POST['contact_num'];
-    $new_num_clean = preg_replace('/[^0-9]/', '', $new_num);
+if ($firebaseInitialized) {
+    $db = $firestore->database();
+    $customerRef = $db->collection('customers')->document($cust_id);
 
-    if (strlen($new_num_clean) !== 11) {
-        $message = "Invalid phone number. Must be exactly 11 digits.";
-    } else {
-        // Update the column Cust_Phone
-        $sql = "UPDATE Customer SET Cust_Phone = ? WHERE Cust_Id = ?";
-        $stmt = $conn->prepare($sql);
-        $stmt->bind_param("si", $new_num_clean, $cust_id);
+    // --- UPDATE LOGIC ---
+    if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_contact'])) {
+        $new_num = $_POST['contact_num'];
+        $new_num_clean = preg_replace('/[^0-9]/', '', $new_num);
 
-        if ($stmt->execute()) {
+        if (strlen($new_num_clean) !== 11) {
+            $message = "Invalid phone number. Must be exactly 11 digits.";
+        } else {
+            $customerRef->update([
+                ['path' => 'Cust_Phone', 'value' => $new_num_clean],
+            ]);
             $message = "Contact number updated successfully!";
         }
     }
+
+    // --- FETCH CURRENT DATA ---
+    $customerDoc = $customerRef->snapshot();
+    if ($customerDoc->exists()) {
+        $user = $customerDoc->data();
+        $current_num = $user['Cust_Phone'] ?? "";
+    }
 }
-
-// --- FETCH CURRENT DATA ---
-$query = "SELECT Cust_Phone FROM Customer WHERE Cust_Id = ?";
-$stmt = $conn->prepare($query);
-$stmt->bind_param("i", $cust_id);
-$stmt->execute();
-$result = $stmt->get_result();
-$user = $result->fetch_assoc();
-
-// Store the current number to display in the input box
-$current_num = $user['Cust_Phone'] ?? "";
 ?>
 
 <body style="background-color: #fcfcfc;">

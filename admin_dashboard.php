@@ -10,14 +10,14 @@ include('config/db.php');
 require_once('includes/cart.php');
 
 $staffRole = $_SESSION['Staff_Role'] ?? 'Staff';
-$isSystemAdmin = isset($_SESSION['Staff_Email']) && $_SESSION['Staff_Email'] === 'admin@gmail.com';
+$isSystemAdmin = isset($_SESSION['Staff_Role']) && $_SESSION['Staff_Role'] === 'System Admin';
 
 // Fetch branch name for manager/staff
 $staffBranchName = '';
 if (isset($_SESSION['Staff_Brnch_Id'])) {
-    $bRes = mysqli_query($conn, "SELECT Brnch_Name FROM mcbranch WHERE Brnch_Id = " . (int) $_SESSION['Staff_Brnch_Id']);
-    $bRow = mysqli_fetch_assoc($bRes);
-    $staffBranchName = $bRow['Brnch_Name'] ?? '';
+    $db = $firestore->database();
+    $branchDoc = $db->collection('branches')->document($_SESSION['Staff_Brnch_Id'])->snapshot();
+    $staffBranchName = $branchDoc->exists() ? ($branchDoc->data()['Brnch_Name'] ?? '') : '';
 }
 
 // Determine current page
@@ -26,13 +26,14 @@ $page = $_GET['page'] ?? 'overview';
 // Set default page based on role
 if (!isset($_GET['page'])) {
     if ($isSystemAdmin) {
-        $page = 'branches';
+        $page = 'overview';
     } elseif ($staffRole === 'Manager') {
         $page = 'overview';
     } elseif (in_array($staffRole, ['Kitchen Staff', 'Rider'])) {
         $page = 'orders';
     }
 }
+
 // Processing Logic for Products
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['mcdomenuitem'])) {
     $name = $_POST['Menu_Name'];
@@ -47,10 +48,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['mcdomenuitem'])) {
     $target_file = $target_dir . "/" . $image_name;
     
     if (move_uploaded_file($_FILES["Menu_Image"]["tmp_name"], $target_file)) {
-        $sql = "INSERT INTO mcdomenuitem (Menu_Name, Menu_Description, Menu_Price, Menu_Category, Menu_ImageURL, Menu_Available) VALUES (?, ?, ?, ?, ?, 1)";
-        $stmt = $conn->prepare($sql);
-        $stmt->bind_param("ssdss", $name, $desc, $price, $category, $image_name);
-        $stmt->execute();
+        $db = $firestore->database();
+        $db->collection('menuItems')->add([
+            'Menu_Name' => $name,
+            'Menu_Description' => $desc,
+            'Menu_Price' => (float) $price,
+            'Menu_Category' => $category,
+            'Menu_ImageURL' => $image_name,
+            'Menu_Available' => true,
+        ]);
         $msg = "Item Added Successfully!";
     }
 }
@@ -63,41 +69,40 @@ if (isset($_POST['update_product'])) {
     $price = $_POST['Menu_Price'];
     $category = $_POST['Menu_Category'];
 
+    $db = $firestore->database();
+    $docRef = $db->collection('menuItems')->document($id);
+
     // If new image is uploaded
     if (!empty($_FILES["Menu_Image"]["name"])) {
         $img = time() . "_" . $_FILES["Menu_Image"]["name"];
         move_uploaded_file($_FILES["Menu_Image"]["tmp_name"], "uploads/" . $img);
-        
-        $sql = "UPDATE mcdomenuitem SET Menu_Name=?, Menu_Description=?, Menu_Price=?, Menu_Category=?, Menu_ImageURL=? WHERE Menu_MenuItemId=?";
-        $stmt = $conn->prepare($sql);
-        $stmt->bind_param("ssdssi", $name, $desc, $price, $category, $img, $id);
+        $docRef->set([
+            'Menu_Name' => $name,
+            'Menu_Description' => $desc,
+            'Menu_Price' => (float) $price,
+            'Menu_Category' => $category,
+            'Menu_ImageURL' => $img,
+        ], ['merge' => true]);
     } else {
-        // Update without changing the image
-        $sql = "UPDATE mcdomenuitem SET Menu_Name=?, Menu_Description=?, Menu_Price=?, Menu_Category=? WHERE Menu_MenuItemId=?";
-        $stmt = $conn->prepare($sql);
-        $stmt->bind_param("ssdsi", $name, $desc, $price, $category, $id);
+        $docRef->set([
+            'Menu_Name' => $name,
+            'Menu_Description' => $desc,
+            'Menu_Price' => (float) $price,
+            'Menu_Category' => $category,
+        ], ['merge' => true]);
     }
     
-    if ($stmt->execute()) { $msg = "Item updated successfully!"; }
+    $msg = "Item updated successfully!";
 }
 
-
-
-// 2. The Delete Logic
+// Delete logic
 if (isset($_GET['delete_id'])) {
     $id = $_GET['delete_id'];
-    
-    $sql = "DELETE FROM mcdomenuitem WHERE Menu_MenuItemId = ?";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("i", $id);
-
-    if ($stmt->execute()) {
-        // Redirect back to the same page but without the delete_id in the URL
-        header("Location: admin_dashboard.php?page=products&status=deleted");
-        exit();
-    }
+    $db = $firestore->database();
+    $db->collection('menuItems')->document($id)->delete();
+    header("Location: admin_dashboard.php?page=products&status=deleted");
+    exit();
 }
-
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -117,8 +122,12 @@ if (isset($_GET['delete_id'])) {
         <?php endif; ?>
         <nav class="admin-nav" id="adminNav">
             <?php if ($isSystemAdmin): ?>
+                <a href="admin_dashboard.php?page=overview"<?php if ($page === 'overview') echo ' class="active"'; ?>>Dashboard</a>
                 <a href="admin_dashboard.php?page=branches"<?php if ($page === 'branches') echo ' class="active"'; ?>>Manage Branches</a>
                 <a href="admin_dashboard.php?page=managers"<?php if ($page === 'managers') echo ' class="active"'; ?>>Manage Managers</a>
+                <a href="admin_dashboard.php?page=staff"<?php if ($page === 'staff') echo ' class="active"'; ?>>Manage Staff</a>
+                <a href="admin_dashboard.php?page=products"<?php if ($page === 'products') echo ' class="active"'; ?>>Manage Products</a>
+                <a href="admin_dashboard.php?page=orders"<?php if ($page === 'orders') echo ' class="active"'; ?>>Orders</a>
             <?php elseif ($staffRole === 'Manager'): ?>
                 <a href="admin_dashboard.php?page=overview"<?php if ($page === 'overview') echo ' class="active"'; ?>><?php echo htmlspecialchars($staffBranchName ?: 'Dashboard'); ?></a>
                 <a href="admin_dashboard.php?page=staff"<?php if ($page === 'staff') echo ' class="active"'; ?>>Manage Staff</a>
@@ -136,10 +145,21 @@ if (isset($_GET['delete_id'])) {
         <?php endif; ?>
         
         <?php
-            $branchId = isset($_SESSION['Staff_Brnch_Id']) ? (int) $_SESSION['Staff_Brnch_Id'] : null;
+            $branchId = isset($_SESSION['Staff_Brnch_Id']) ? $_SESSION['Staff_Brnch_Id'] : null;
 
             if ($page == 'products') {
-                $all_items = mysqli_query($conn, "SELECT * FROM mcdomenuitem ORDER BY Menu_Category ASC");
+                $db = $firestore->database();
+                $menuSnapshot = $db->collection('menuItems')->orderBy('Menu_Category')->documents();
+                $all_items = [];
+                foreach ($menuSnapshot as $doc) {
+                    if ($doc->exists()) {
+                        $data = $doc->data();
+                        $data['Menu_MenuItemId'] = $doc->id();
+                        $all_items[] = $data;
+                    }
+                }
+                // Wrap as iterable object for mysqli_fetch_assoc compatibility in admin_add_products.php
+                $all_items_iterable = new ArrayIterator($all_items);
                 include 'admin_add_products.php';
             } elseif ($page == 'branches') {
                 include 'admin_manage_users.php';
@@ -150,15 +170,50 @@ if (isset($_GET['delete_id'])) {
             } elseif ($page == 'orders') {
                 include 'admin_kitchen_orders.php';
             } elseif ($page == 'overview' && $staffRole === 'Manager' && $branchId) {
-                // Manager branch dashboard
-                $branchInfo = mysqli_fetch_assoc(mysqli_query($conn, "SELECT * FROM mcbranch WHERE Brnch_Id = $branchId"));
-                $totalBranchOrders = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) AS c FROM mcorder WHERE Order_Brnch_Id = $branchId"))['c'];
-                $pendingBranchOrders = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) AS c FROM mcorder WHERE Order_Brnch_Id = $branchId AND Order_Status = 'Pending'"))['c'];
-                $preparingBranchOrders = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) AS c FROM mcorder WHERE Order_Brnch_Id = $branchId AND Order_Status = 'Preparing'"))['c'];
-                $readyBranchOrders = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) AS c FROM mcorder WHERE Order_Brnch_Id = $branchId AND Order_Status = 'Ready'"))['c'];
-                $completedBranchOrders = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) AS c FROM mcorder WHERE Order_Brnch_Id = $branchId AND Order_Status = 'Completed'"))['c'];
-                $branchStaffCount = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) AS c FROM staff WHERE Staff_Brnch_Id = $branchId"))['c'];
-                $branchRevenue = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COALESCE(SUM(Order_TotalAmount), 0) AS t FROM mcorder WHERE Order_Brnch_Id = $branchId AND Order_Status = 'Completed'"))['t'];
+                $db = $firestore->database();
+                
+                // Branch info
+                $branchDoc = $db->collection('branches')->document($branchId)->snapshot();
+                $branchInfo = $branchDoc->exists() ? $branchDoc->data() : [];
+                $branchInfo['Brnch_Id'] = $branchDoc->id();
+                
+                // Orders for this branch
+                $branchOrders = $db->collection('orders')
+                    ->where('Order_Brnch_Id', '=', $branchId)
+                    ->documents();
+                
+                $totalBranchOrders = 0;
+                $pendingBranchOrders = 0;
+                $preparingBranchOrders = 0;
+                $readyBranchOrders = 0;
+                $completedBranchOrders = 0;
+                $branchRevenue = 0;
+                
+                foreach ($branchOrders as $ord) {
+                    if (!$ord->exists()) continue;
+                    $o = $ord->data();
+                    $totalBranchOrders++;
+                    
+                    $status = $o['Order_Status'] ?? '';
+                    switch ($status) {
+                        case 'Pending': $pendingBranchOrders++; break;
+                        case 'Preparing': $preparingBranchOrders++; break;
+                        case 'Ready': $readyBranchOrders++; break;
+                        case 'Completed': 
+                            $completedBranchOrders++; 
+                            $branchRevenue += (float) ($o['Order_TotalAmount'] ?? 0);
+                            break;
+                    }
+                }
+                
+                // Staff count
+                $staffDocs = $db->collection('staff')
+                    ->where('Staff_Brnch_Id', '=', $branchId)
+                    ->documents();
+                $branchStaffCount = 0;
+                foreach ($staffDocs as $s) {
+                    if ($s->exists()) $branchStaffCount++;
+                }
                 ?>
                 <div class="overview-header">
                     <div>
@@ -231,29 +286,57 @@ if (isset($_GET['delete_id'])) {
                 </div>
                 <?php
             } elseif ($page == 'overview') {
-                // System admin overview (global stats)
-                $totalProducts = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) AS c FROM mcdomenuitem"))['c'];
-                $totalOrders = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) AS c FROM mcorder"))['c'];
-                $totalCustomers = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) AS c FROM customer"))['c'];
-                $totalStaff = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) AS c FROM staff"))['c'];
-                $pendingOrders = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) AS c FROM mcorder WHERE Order_Status = 'Pending'"))['c'];
-                $preparingOrders = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) AS c FROM mcorder WHERE Order_Status = 'Preparing'"))['c'];
-                $revenue = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COALESCE(SUM(Order_TotalAmount), 0) AS t FROM mcorder WHERE Order_Status = 'Completed'"))['t'];
-                $recentOrdersResult = mysqli_query($conn, "SELECT o.*, c.Cust_FName, c.Cust_LName, c.Cust_Email, c.Cust_Phone, c.Cust_CreatedAt FROM mcorder o INNER JOIN customer c ON c.Cust_Id = o.Order_Cust_Id ORDER BY o.Order_OrderDate DESC LIMIT 20");
-
+                $db = $firestore->database();
+                
+                // Global counts
+                $menuCount = 0;
+                foreach ($db->collection('menuItems')->documents() as $d) { if ($d->exists()) $menuCount++; }
+                
+                $orderCount = 0;
+                $pendingOrders = 0;
+                $preparingOrders = 0;
+                $revenue = 0;
+                
+                $allOrders = $db->collection('orders')->documents();
                 $ordersData = [];
-                $orderIds = [];
-                while ($ro = mysqli_fetch_assoc($recentOrdersResult)) {
-                    $ordersData[] = $ro;
-                    $orderIds[] = $ro['Order_Id'];
+                foreach ($allOrders as $ordDoc) {
+                    if (!$ordDoc->exists()) continue;
+                    $o = $ordDoc->data();
+                    $o['Order_Id'] = $ordDoc->id();
+                    $orderCount++;
+                    
+                    $status = $o['Order_Status'] ?? '';
+                    if ($status === 'Pending') $pendingOrders++;
+                    if ($status === 'Preparing') $preparingOrders++;
+                    if ($status === 'Completed') {
+                        $revenue += (float) ($o['Order_TotalAmount'] ?? 0);
+                    }
+                    
+                    $ordersData[] = $o;
                 }
-
+                
+                // Sort by date descending
+                usort($ordersData, function($a, $b) {
+                    $aTime = isset($a['Order_OrderDate']) ? (is_string($a['Order_OrderDate']) ? strtotime($a['Order_OrderDate']) : $a['Order_OrderDate']->get()->format('U')) : 0;
+                    $bTime = isset($b['Order_OrderDate']) ? (is_string($b['Order_OrderDate']) ? strtotime($b['Order_OrderDate']) : $b['Order_OrderDate']->get()->format('U')) : 0;
+                    return $bTime - $aTime;
+                });
+                
+                $ordersData = array_slice($ordersData, 0, 20);
+                
+                $customerCount = 0;
+                foreach ($db->collection('customers')->documents() as $d) { if ($d->exists()) $customerCount++; }
+                
+                $staffCount = 0;
+                foreach ($db->collection('staff')->documents() as $d) { if ($d->exists()) $staffCount++; }
+                
+                // Build items array for each order
                 $itemsByOrder = [];
-                if (!empty($orderIds)) {
-                    $ids = implode(',', array_map('intval', $orderIds));
-                    $itemsResult = mysqli_query($conn, "SELECT oi.*, m.Menu_Name FROM orderitem oi INNER JOIN mcdomenuitem m ON m.Menu_MenuItemId = oi.OrderItem_MenuItemId WHERE oi.OrderItem_Order_Id IN ($ids)");
-                    while ($item = mysqli_fetch_assoc($itemsResult)) {
-                        $itemsByOrder[$item['OrderItem_Order_Id']][] = $item;
+                foreach ($ordersData as $ro) {
+                    $roItems = $ro['items'] ?? [];
+                    $itemsByOrder[$ro['Order_Id']] = [];
+                    foreach ($roItems as $item) {
+                        $itemsByOrder[$ro['Order_Id']][] = $item;
                     }
                 }
                 ?>
@@ -269,28 +352,28 @@ if (isset($_GET['delete_id'])) {
                     <div class="stat-card">
                         <div class="stat-icon" style="background:#fff3cd;">&#128230;</div>
                         <div class="stat-info">
-                            <span class="stat-number"><?php echo $totalProducts; ?></span>
+                            <span class="stat-number"><?php echo $menuCount; ?></span>
                             <span class="stat-label">Total Products</span>
                         </div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-icon" style="background:#cce5ff;">&#128203;</div>
                         <div class="stat-info">
-                            <span class="stat-number"><?php echo $totalOrders; ?></span>
+                            <span class="stat-number"><?php echo $orderCount; ?></span>
                             <span class="stat-label">Total Orders</span>
                         </div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-icon" style="background:#d4edda;">&#128101;</div>
                         <div class="stat-info">
-                            <span class="stat-number"><?php echo $totalCustomers; ?></span>
+                            <span class="stat-number"><?php echo $customerCount; ?></span>
                             <span class="stat-label">Total Customers</span>
                         </div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-icon" style="background:#f8d7da;">&#128100;</div>
                         <div class="stat-info">
-                            <span class="stat-number"><?php echo $totalStaff; ?></span>
+                            <span class="stat-number"><?php echo $staffCount; ?></span>
                             <span class="stat-label">Total Staff</span>
                         </div>
                     </div>
@@ -344,7 +427,7 @@ if (isset($_GET['delete_id'])) {
                             <?php foreach ($ordersData as $ro): ?>
                                 <tr class="clickable-row" onclick="openOrderModal(<?php echo htmlspecialchars(json_encode($ro)); ?>, <?php echo htmlspecialchars(json_encode($itemsByOrder[$ro['Order_Id']] ?? [])); ?>)">
                                     <td class="text-bold">#<?php echo $ro['Order_Id']; ?></td>
-                                    <td><?php echo htmlspecialchars($ro['Cust_FName'] . ' ' . $ro['Cust_LName']); ?></td>
+                                    <td><?php echo htmlspecialchars(($ro['Cust_FName'] ?? '') . ' ' . ($ro['Cust_LName'] ?? '')); ?></td>
                                     <td><span class="badge status-<?php echo strtolower($ro['Order_Status']); ?>"><?php echo htmlspecialchars($ro['Order_Status']); ?></span></td>
                                     <td>₱<?php echo number_format($ro['Order_TotalAmount'], 2); ?></td>
                                     <td><?php echo date('M d, Y - h:i A', strtotime($ro['Order_OrderDate'])); ?></td>
@@ -382,7 +465,6 @@ function filterOverview() {
 
 function openOrderModal(order, items) {
     var statusClass = 'status-' + order.Order_Status.toLowerCase();
-    var customerSince = order.Cust_CreatedAt ? new Date(order.Cust_CreatedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'N/A';
     var orderDate = new Date(order.Order_OrderDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
     var itemsHtml = '';
@@ -406,10 +488,7 @@ function openOrderModal(order, items) {
             '<div class="modal-customer">' +
                 '<h3>Customer Information</h3>' +
                 '<div class="info-grid">' +
-                    '<div class="info-item"><span class="info-label">Name</span><span class="info-value">' + order.Cust_FName + ' ' + order.Cust_LName + '</span></div>' +
-                    '<div class="info-item"><span class="info-label">Email</span><span class="info-value">' + (order.Cust_Email || 'N/A') + '</span></div>' +
-                    '<div class="info-item"><span class="info-label">Phone</span><span class="info-value">' + (order.Cust_Phone || 'N/A') + '</span></div>' +
-                    '<div class="info-item"><span class="info-label">Customer Since</span><span class="info-value">' + customerSince + '</span></div>' +
+                    '<div class="info-item"><span class="info-label">Name</span><span class="info-value">' + (order.Cust_FName || '') + ' ' + (order.Cust_LName || '') + '</span></div>' +
                 '</div>' +
             '</div>' +
             '<div class="modal-order">' +

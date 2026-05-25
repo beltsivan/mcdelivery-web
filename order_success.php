@@ -6,16 +6,19 @@ if (session_status() === PHP_SESSION_NONE) {
 include('config/db.php');
 include('includes/header.php');
 
-$orderId = isset($_GET['order_id']) ? (int) $_GET['order_id'] : 0;
+$orderId = isset($_GET['order_id']) ? $_GET['order_id'] : 0;
 
 $order = null;
-if ($orderId > 0 && isset($_SESSION['Cust_Id'])) {
-    $stmt = mysqli_prepare($conn, "SELECT o.*, b.Brnch_Name, b.Brnch_Street, b.Brnch_City FROM mcorder o LEFT JOIN mcbranch b ON b.Brnch_Id = o.Order_Brnch_Id WHERE o.Order_Id = ? AND o.Order_Cust_Id = ?");
-    mysqli_stmt_bind_param($stmt, "ii", $orderId, $_SESSION['Cust_Id']);
-    mysqli_stmt_execute($stmt);
-    $result = mysqli_stmt_get_result($stmt);
-    $order = mysqli_fetch_assoc($result);
-    mysqli_stmt_close($stmt);
+if ($orderId && isset($_SESSION['Cust_Id']) && $firebaseInitialized) {
+    $db = $firestore->database();
+    $orderDoc = $db->collection('orders')->document((string) $orderId)->snapshot();
+    if ($orderDoc->exists()) {
+        $orderData = $orderDoc->data();
+        if (($orderData['Order_Cust_Id'] ?? '') === $_SESSION['Cust_Id']) {
+            $order = $orderData;
+            $order['Order_Id'] = $orderDoc->id();
+        }
+    }
 }
 
 $orderSuccess = isset($_SESSION['order_success']) ? $_SESSION['order_success'] : null;

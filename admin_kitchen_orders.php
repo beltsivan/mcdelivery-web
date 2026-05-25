@@ -45,6 +45,7 @@
 
 <div class="kitchen-orders">
     <?php
+    $db = $firestore->database();
     $currentTab = isset($_GET['order_status']) ? $_GET['order_status'] : 'pending';
 
     $statusMap = [
@@ -65,29 +66,29 @@
 
     // Handle accept order
     if (isset($_POST['accept_order'])) {
-        $acceptId = (int) $_POST['order_id'];
+        $acceptId = $_POST['order_id'];
         $prepTime = (int) $_POST['prep_time'];
         if ($prepTime < 1) $prepTime = 15;
-        if (mcd_accept_order($conn, $acceptId, $prepTime)) {
+        if (mcd_accept_order(null, $acceptId, $prepTime)) {
             echo '<div class="alert-success">Order #' . $acceptId . ' accepted! Preparing time: ' . $prepTime . ' mins</div>';
         }
     }
 
     // Handle status update
     if (isset($_POST['update_status'])) {
-        $updateId = (int) $_POST['order_id'];
+        $updateId = $_POST['order_id'];
         $newStatus = $_POST['new_status'];
-        if (mcd_update_order_status($conn, $updateId, $newStatus)) {
+        if (mcd_update_order_status(null, $updateId, $newStatus)) {
             echo '<div class="alert-success">Order #' . $updateId . ' updated to ' . $newStatus . '</div>';
         }
     }
 
     $branchFilter = null;
     if ($staffRole !== 'Admin' && isset($_SESSION['Staff_Brnch_Id'])) {
-        $branchFilter = (int) $_SESSION['Staff_Brnch_Id'];
+        $branchFilter = $_SESSION['Staff_Brnch_Id'];
     }
 
-    $orders = mcd_get_kitchen_orders($conn, $filter, $branchFilter);
+    $orders = mcd_get_kitchen_orders(null, $filter, $branchFilter);
     ?>
 
     <div class="orders-tabs">
@@ -103,7 +104,7 @@
         <?php
         $customers = [];
         foreach ($orders as $order) {
-            $name = $order['Cust_FName'] . ' ' . $order['Cust_LName'];
+            $name = ($order['Cust_FName'] ?? '') . ' ' . ($order['Cust_LName'] ?? '');
             $customers[$name][] = $order;
         }
         ?>
@@ -139,7 +140,7 @@
                                 </div>
                             <?php endif; ?>
 
-                            <?php $paymentInfo = mcd_get_payment_info($conn, $order['Order_Id']); ?>
+                            <?php $paymentInfo = mcd_get_payment_info(null, $order['Order_Id']); ?>
                             <?php if ($paymentInfo): ?>
                                 <div class="order-payment">
                                     <span>Payment: <strong><?php echo htmlspecialchars($paymentInfo['Pay_PaymentType']); ?></strong></span>
@@ -188,7 +189,7 @@
                 </div>
 
                 <div class="order-customer">
-                    <strong><?php echo htmlspecialchars($order['Cust_FName'] . ' ' . $order['Cust_LName']); ?></strong>
+                    <strong><?php echo htmlspecialchars(($order['Cust_FName'] ?? '') . ' ' . ($order['Cust_LName'] ?? '')); ?></strong>
                     &nbsp;|&nbsp; Items: <?php echo (int) $order['Order_Quantity']; ?>
                     &nbsp;|&nbsp; Total: ₱<?php echo number_format($order['Order_TotalAmount'], 2); ?>
                 </div>
@@ -200,7 +201,7 @@
                 <?php endif; ?>
 
                 <?php
-                $paymentInfo = mcd_get_payment_info($conn, $order['Order_Id']);
+                $paymentInfo = mcd_get_payment_info(null, $order['Order_Id']);
                 ?>
                 <?php if ($paymentInfo): ?>
                     <div class="order-payment">

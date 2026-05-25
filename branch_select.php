@@ -7,31 +7,39 @@ if (!isset($_SESSION['Cust_Id'])) {
     exit;
 }
 
-// Handle branch selection
-if (isset($_POST['branch_id'])) {
-    $branchId = (int) $_POST['branch_id'];
-    $stmt = mysqli_prepare($conn, "SELECT * FROM mcbranch WHERE Brnch_Id = ?");
-    mysqli_stmt_bind_param($stmt, "i", $branchId);
-    mysqli_stmt_execute($stmt);
-    $result = mysqli_stmt_get_result($stmt);
-    $branch = mysqli_fetch_assoc($result);
-    mysqli_stmt_close($stmt);
+if ($firebaseInitialized) {
+    $db = $firestore->database();
 
-    if ($branch) {
-        $_SESSION['Cust_Brnch_Id'] = (int) $branch['Brnch_Id'];
-        $_SESSION['Cust_Brnch_Name'] = $branch['Brnch_Name'];
-        $_SESSION['Cust_Brnch_Street'] = $branch['Brnch_Street'];
-        $_SESSION['Cust_Brnch_Barangay'] = $branch['Brnch_Barangay'];
-        $_SESSION['Cust_Brnch_City'] = $branch['Brnch_City'];
-        $_SESSION['Cust_Brnch_Municipality'] = $branch['Brnch_Municipality'];
-        $_SESSION['Cust_Brnch_PostalCode'] = $branch['Brnch_PostalCode'];
-        header('Location: index.php');
-        exit;
+    // Handle branch selection
+    if (isset($_POST['branch_id'])) {
+        $branchId = $_POST['branch_id'];
+        $branchDoc = $db->collection('branches')->document($branchId)->snapshot();
+
+        if ($branchDoc->exists()) {
+            $branch = $branchDoc->data();
+            $_SESSION['Cust_Brnch_Id'] = $branchDoc->id();
+            $_SESSION['Cust_Brnch_Name'] = $branch['Brnch_Name'] ?? '';
+            $_SESSION['Cust_Brnch_Street'] = $branch['Brnch_Street'] ?? '';
+            $_SESSION['Cust_Brnch_Barangay'] = $branch['Brnch_Barangay'] ?? '';
+            $_SESSION['Cust_Brnch_City'] = $branch['Brnch_City'] ?? '';
+            $_SESSION['Cust_Brnch_Municipality'] = $branch['Brnch_Municipality'] ?? '';
+            $_SESSION['Cust_Brnch_PostalCode'] = $branch['Brnch_PostalCode'] ?? '';
+            header('Location: index.php');
+            exit;
+        }
+    }
+
+    $currentBranchId = isset($_SESSION['Cust_Brnch_Id']) ? $_SESSION['Cust_Brnch_Id'] : null;
+    $branchSnapshot = $db->collection('branches')->orderBy('Brnch_Name')->documents();
+    $branches = [];
+    foreach ($branchSnapshot as $doc) {
+        if ($doc->exists()) {
+            $b = $doc->data();
+            $b['Brnch_Id'] = $doc->id();
+            $branches[] = $b;
+        }
     }
 }
-
-$currentBranchId = isset($_SESSION['Cust_Brnch_Id']) ? (int) $_SESSION['Cust_Brnch_Id'] : null;
-$branches = mysqli_query($conn, "SELECT * FROM mcbranch ORDER BY Brnch_Name ASC, Brnch_City ASC");
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -152,8 +160,8 @@ $branches = mysqli_query($conn, "SELECT * FROM mcbranch ORDER BY Brnch_Name ASC,
 
         <form method="POST" id="branchForm">
             <div class="branch-list">
-                <?php while ($branch = mysqli_fetch_assoc($branches)): ?>
-                <button type="button" class="branch-option<?php echo ($currentBranchId === (int) $branch['Brnch_Id']) ? ' selected' : ''; ?>" onclick="selectBranch(this, <?php echo $branch['Brnch_Id']; ?>)">
+                <?php foreach ($branches as $branch): ?>
+                <button type="button" class="branch-option<?php echo ($currentBranchId === $branch['Brnch_Id']) ? ' selected' : ''; ?>" onclick="selectBranch(this, '<?php echo $branch['Brnch_Id']; ?>')">
                     <div class="branch-name"><?php echo htmlspecialchars($branch['Brnch_Name'] ?: $branch['Brnch_City'] . ' - ' . $branch['Brnch_Street']); ?></div>
                     <div class="branch-address">
                         <?php
@@ -167,7 +175,7 @@ $branches = mysqli_query($conn, "SELECT * FROM mcbranch ORDER BY Brnch_Name ASC,
                         ?>
                     </div>
                 </button>
-                <?php endwhile; ?>
+                <?php endforeach; ?>
             </div>
             <input type="hidden" name="branch_id" id="selectedBranchId" value="">
             <button type="submit" class="btn-confirm" id="confirmBtn" disabled>Confirm Branch</button>
@@ -180,9 +188,12 @@ $branches = mysqli_query($conn, "SELECT * FROM mcbranch ORDER BY Brnch_Name ASC,
     document.addEventListener('DOMContentLoaded', function() {
         var selected = document.querySelector('.branch-option.selected');
         if (selected) {
-            var bid = selected.getAttribute('onclick').match(/\d+/)[0];
-            document.getElementById('selectedBranchId').value = bid;
-            document.getElementById('confirmBtn').disabled = false;
+            var onclick = selected.getAttribute('onclick');
+            var match = onclick && onclick.match(/'([^']+)'/);
+            if (match) {
+                document.getElementById('selectedBranchId').value = match[1];
+                document.getElementById('confirmBtn').disabled = false;
+            }
         }
     });
 

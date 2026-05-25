@@ -9,23 +9,28 @@ if (!isset($_SESSION['Cust_Id'])) {
 
 $cust_id = $_SESSION['Cust_Id'];
 
-// --- ADD THIS LOGIC HERE ---
-if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['address'])) {
-    $cust_id = $_SESSION['Cust_Id'];
-    $street = $_POST['Add_Street'];
-    $brgy = $_POST['Add_Barangay'];
-    $city = $_POST['Add_City'];
-    $muni = $_POST['Add_Municipality'];
-    $zip = $_POST['Add_PostalCode'];
+if ($firebaseInitialized) {
+    $db = $firestore->database();
+    $addrCol = $db->collection('addresses');
 
-    $sql = "INSERT INTO Address (Add_Cust_Id, Add_Street, Add_Barangay, Add_City, Add_Municipality, Add_PostalCode) 
-            VALUES (?, ?, ?, ?, ?, ?)";
-    
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("isssss", $cust_id, $street, $brgy, $city, $muni, $zip);
+    // --- ADD ADDRESS ---
+    if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['address'])) {
+        $street = $_POST['Add_Street'];
+        $brgy = $_POST['Add_Barangay'];
+        $city = $_POST['Add_City'];
+        $muni = $_POST['Add_Municipality'];
+        $zip = $_POST['Add_PostalCode'];
 
-    if ($stmt->execute()) {
-        $addId = $stmt->insert_id;
+        $addrDoc = $addrCol->add([
+            'Add_Cust_Id' => $cust_id,
+            'Add_Street' => $street,
+            'Add_Barangay' => $brgy,
+            'Add_City' => $city,
+            'Add_Municipality' => $muni,
+            'Add_PostalCode' => $zip,
+        ]);
+
+        $addId = $addrDoc->id();
         if (isset($_GET['from']) && $_GET['from'] === 'checkout') {
             header("Location: checkout.php?selected=$addId");
         } else {
@@ -33,34 +38,30 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['address'])) {
         }
         exit();
     }
-}
 
-// --- DELETE LOGIC ---
-if (isset($_GET['delete_id'])) {
-    $delete_id = $_GET['delete_id'];
-    $cust_id = $_SESSION['Cust_Id']; // Security: Ensure it belongs to the logged-in user
-
-    // We include Add_Cust_Id in the WHERE clause so users can't delete other people's addresses by guessing IDs
-    $sql = "DELETE FROM Address WHERE Add_Id = ? AND Add_Cust_Id = ?";
-    
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("ii", $delete_id, $cust_id);
-
-    if ($stmt->execute()) {
-        // Redirect back to the clean URL to remove the ?delete_id from the address bar
+    // --- DELETE ADDRESS ---
+    if (isset($_GET['delete_id'])) {
+        $delete_id = $_GET['delete_id'];
+        $delDoc = $addrCol->document($delete_id)->snapshot();
+        if ($delDoc->exists() && ($delDoc->data()['Add_Cust_Id'] ?? '') === $cust_id) {
+            $delDoc->reference()->delete();
+        }
         header("Location: address.php?msg=deleted");
         exit();
-    } else {
-        echo "Error deleting record: " . $conn->error;
     }
-}
 
-$cust_id = $_SESSION['Cust_Id'];
-$query = "SELECT * FROM Address WHERE Add_Cust_Id = ?";
-$stmt = $conn->prepare($query);
-$stmt->bind_param("i", $cust_id);
-$stmt->execute();
-$result = $stmt->get_result();
+    // --- FETCH ADDRESSES ---
+    $snapshot = $addrCol->where('Add_Cust_Id', '=', $cust_id)->documents();
+    $addresses = [];
+    foreach ($snapshot as $doc) {
+        if ($doc->exists()) {
+            $addr = $doc->data();
+            $addr['Add_Id'] = $doc->id();
+            $addresses[] = $addr;
+        }
+    }
+    $result = $addresses;
+}
 ?>
 
 <body style="background-color: #fcfcfc;">
@@ -91,11 +92,11 @@ $result = $stmt->get_result();
 
         <h2>My Address</h2>
 
-        <?php if ($result->num_rows > 0): ?>
-            <?php while($row = $result->fetch_assoc()): ?>
+        <?php if (!empty($result)): ?>
+            <?php foreach ($result as $row): ?>
                 <div class="address-card">
                     <div class="address-details">
-                        <span class="address-tag">Address #<?php echo $row['Add_Id']; ?></span>
+                        <span class="address-tag">Address #<?php echo htmlspecialchars($row['Add_Id']); ?></span>
                         <p><?php echo htmlspecialchars($row['Add_Street']); ?>, Brgy. <?php echo htmlspecialchars($row['Add_Barangay']); ?></p>
                         <p><?php echo htmlspecialchars($row['Add_Municipality']); ?>, <?php echo htmlspecialchars($row['Add_City']); ?></p>
                         <p><?php echo htmlspecialchars($row['Add_PostalCode']); ?></p>
@@ -106,7 +107,7 @@ $result = $stmt->get_result();
                             Delete
                         </a>
                 </div>
-            <?php endwhile; ?>
+            <?php endforeach; ?>
         <?php else: ?>
             <div class="address-card">
                 <p>No address saved yet. Add one to start ordering!</p>

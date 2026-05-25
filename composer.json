@@ -1,0 +1,11 @@
+{
+    "name": "mcdelivery/firebase-migration",
+    "description": "McDelivery Web - Firebase Migration",
+    "require": {
+        "kreait/firebase-php": "*",
+        "google/cloud-firestore": "^2.1"
+    },
+    "config": {
+        "optimize-autoloader": true
+    }
+}

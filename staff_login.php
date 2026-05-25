@@ -14,30 +14,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = trim($_POST['email']);
     $password = $_POST['password'];
 
-    $stmt = mysqli_prepare($conn, "SELECT * FROM staff WHERE Staff_Email = ? LIMIT 1");
+    if (!$firebaseInitialized) {
+        $error = 'Firebase not configured.';
+    } else {
+        try {
+            // Use Firebase Auth REST API to verify credentials
+            $url = "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=$firebaseApiKey";
+            $payload = json_encode([
+                'email' => $email,
+                'password' => $password,
+                'returnSecureToken' => true,
+            ]);
 
-    if ($stmt) {
-        mysqli_stmt_bind_param($stmt, "s", $email);
-        mysqli_stmt_execute($stmt);
-        $result = mysqli_stmt_get_result($stmt);
-        $staff = mysqli_fetch_assoc($result);
-        mysqli_stmt_close($stmt);
+            $ch = curl_init($url);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
 
-        if ($staff && $password === $staff['Staff_Password']) {
-            $_SESSION['Staff_Id'] = (int) $staff['Staff_Id'];
-            $_SESSION['Staff_FName'] = $staff['Staff_FName'];
-            $_SESSION['Staff_LName'] = $staff['Staff_LName'];
-            $_SESSION['Staff_Role'] = $staff['Staff_Role'];
-            $_SESSION['Staff_Email'] = $staff['Staff_Email'];
-            $_SESSION['Staff_Brnch_Id'] = $staff['Staff_Brnch_Id'] ? (int) $staff['Staff_Brnch_Id'] : null;
+            $data = json_decode($response, true);
 
-            header('Location: admin_dashboard.php');
-            exit;
-        } else {
+            if ($httpCode === 200 && isset($data['idToken'])) {
+                $verifiedToken = $auth->verifyIdToken($data['idToken']);
+                $uid = $verifiedToken->claims()->get('sub');
+
+                // Read staff data from Firestore
+                $db = $firestore->database();
+                $staffDoc = $db->collection('staff')->document($uid)->snapshot();
+
+                if ($staffDoc->exists()) {
+                    $staff = $staffDoc->data();
+                    $_SESSION['Staff_Id'] = $uid;
+                    $_SESSION['Staff_FName'] = $staff['Staff_FName'] ?? '';
+                    $_SESSION['Staff_LName'] = $staff['Staff_LName'] ?? '';
+                    $_SESSION['Staff_Role'] = $staff['Staff_Role'] ?? 'Staff';
+                    $_SESSION['Staff_Email'] = $staff['Staff_Email'] ?? $email;
+                    $_SESSION['Staff_Brnch_Id'] = $staff['Staff_Brnch_Id'] ?? null;
+
+                    header('Location: admin_dashboard.php');
+                    exit;
+                } else {
+                    $error = 'Staff account not found.';
+                }
+            } else {
+                $error = 'Invalid email or password.';
+            }
+        } catch (\Exception $e) {
             $error = 'Invalid email or password.';
         }
-    } else {
-        $error = 'Database error.';
     }
 }
 ?>

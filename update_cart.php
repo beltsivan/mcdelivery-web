@@ -11,14 +11,15 @@ if (!isset($_SESSION['Cust_Id'])) {
 require_once('includes/cart.php');
 require_once('config/db.php');
 
-$custId = (int) $_SESSION['Cust_Id'];
-$menuItemId = isset($_POST['menu_item_id']) ? (int) $_POST['menu_item_id'] : 0;
+$custId = $_SESSION['Cust_Id'];
+$cartItemId = isset($_POST['cart_item_id']) ? $_POST['cart_item_id'] : '';
 $action = isset($_POST['action']) ? $_POST['action'] : '';
 
-if ($menuItemId > 0 && in_array($action, ['increase', 'decrease'])) {
-    mcd_update_cart_quantity($conn, $custId, $menuItemId, $action);
+if ($cartItemId !== '' && in_array($action, ['increase', 'decrease'])) {
+    mcd_update_cart_quantity(null, $custId, $cartItemId, $action);
 }
 
 $redirect = isset($_POST['redirect']) ? $_POST['redirect'] : 'menu.php';
-header('Location: ' . $redirect . '?bag=1');
+$separator = (strpos($redirect, '?') !== false) ? '&' : '?';
+header('Location: ' . $redirect . $separator . 'bag=1');
 exit;

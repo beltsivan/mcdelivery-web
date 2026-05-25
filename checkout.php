@@ -12,22 +12,32 @@ require_once('includes/cart.php');
 require_once('config/db.php');
 include('includes/header.php');
 
-$custId = (int) $_SESSION['Cust_Id'];
+$custId = $_SESSION['Cust_Id'];
+$db = $firestore->database();
 
 // Check if customer selected a branch
 $selectedBranch = null;
 if (isset($_SESSION['Cust_Brnch_Id'])) {
-    $bStmt = mysqli_prepare($conn, "SELECT * FROM mcbranch WHERE Brnch_Id = ?");
-    mysqli_stmt_bind_param($bStmt, "i", $_SESSION['Cust_Brnch_Id']);
-    mysqli_stmt_execute($bStmt);
-    $bResult = mysqli_stmt_get_result($bStmt);
-    $selectedBranch = mysqli_fetch_assoc($bResult);
-    mysqli_stmt_close($bStmt);
+    $branchDoc = $db->collection('branches')->document((string) $_SESSION['Cust_Brnch_Id'])->snapshot();
+    if ($branchDoc->exists()) {
+        $selectedBranch = $branchDoc->data();
+        $selectedBranch['Brnch_Id'] = $branchDoc->id();
+    }
 }
 
 // Check for addresses
-$addrResult = mysqli_query($conn, "SELECT * FROM Address WHERE Add_Cust_Id = $custId");
-$addresses = mysqli_fetch_all($addrResult, MYSQLI_ASSOC);
+$addrSnapshot = $db->collection('addresses')
+    ->where('Add_Cust_Id', '=', $custId)
+    ->documents();
+
+$addresses = [];
+foreach ($addrSnapshot as $addrDoc) {
+    if ($addrDoc->exists()) {
+        $addr = $addrDoc->data();
+        $addr['Add_Id'] = $addrDoc->id();
+        $addresses[] = $addr;
+    }
+}
 
 if (empty($addresses)) {
     header('Location: address.php?required=1');
@@ -37,7 +47,7 @@ if (empty($addresses)) {
 // Process checkout
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['address_id'])) {
     $paymentMethod = isset($_POST['payment_method']) ? $_POST['payment_method'] : 'Cash on Delivery';
-    $addressId = (int) $_POST['address_id'];
+    $addressId = $_POST['address_id'];
 
     // Verify address belongs to user
     $valid = false;
@@ -47,8 +57,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['address_id'])) {
     if (!$valid) {
         echo '<div class="error-banner">Invalid address selected.</div>';
     } else {
-        $branchId = isset($_SESSION['Cust_Brnch_Id']) ? (int) $_SESSION['Cust_Brnch_Id'] : null;
-        $orderId = mcd_checkout($conn, $custId, $addressId, $paymentMethod, $branchId);
+        $branchId = isset($_SESSION['Cust_Brnch_Id']) ? $_SESSION['Cust_Brnch_Id'] : null;
+        $orderId = mcd_checkout(null, $custId, $addressId, $paymentMethod, $branchId);
 
         if ($orderId) {
             $_SESSION['order_success'] = $orderId;
@@ -110,4 +120,3 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['address_id'])) {
 </div>
 </body>
 <?php include('includes/footer.php'); ?>
-

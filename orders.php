@@ -3,15 +3,17 @@ include('config/db.php');
 include('includes/header.php');
 
 if (!isset($_SESSION['Cust_Id'])) {
-    echo '<main class="main-container" style="padding:60px 0;text-align:center;"><h1>Please log in to view your orders.</h1><a href="index.php" style="display:inline-block;background:#FFBC0D;padding:14px 36px;border-radius:30px;font-weight:bold;text-decoration:none;color:#292929;margin-top:16px;">Go Home</a></main>';
+    echo '<main class="main-container" style="padding:60px 0;text-align:center;"><h1>McDonalds Philippine</h1>
+    <h1>Hungry for your favorites?</h1><h1>Log in to view your order history</h1><h1>&</h1>
+    <h1>track current deliveries.</h1><a href="index.php" style="display:inline-block;background:#FFBC0D;padding:14px 36px;border-radius:30px;font-weight:bold;text-decoration:none;color:#292929;margin-top:16px;">Go Home</a></main>';
     include('includes/footer.php');
     exit;
 }
 
 require_once('includes/cart.php');
 
-$custId = (int) $_SESSION['Cust_Id'];
-$orders = mcd_get_customer_orders($conn, $custId);
+$custId = $_SESSION['Cust_Id'];
+$orders = mcd_get_customer_orders(null, $custId);
 ?>
 <style>
 .orders-page { padding: 40px 0; }
@@ -109,7 +111,7 @@ $orders = mcd_get_customer_orders($conn, $custId);
             </div>
 
             <?php
-            $paymentInfo = mcd_get_payment_info($conn, $order['Order_Id']);
+            $paymentInfo = mcd_get_payment_info(null, $order['Order_Id']);
             ?>
             <?php if ($paymentInfo): ?>
                 <div class="ord-payment-info">
@@ -121,25 +123,16 @@ $orders = mcd_get_customer_orders($conn, $custId);
             <?php endif; ?>
 
             <?php
-            $statusStmt = mysqli_prepare($conn, "SELECT Dlvry_StatusUpdate, Dlvry_DateTime FROM mcdeliverystatus WHERE Dlvry_Order_Id = ? ORDER BY Dlvry_DateTime ASC");
-            $timelineItems = [];
-            if ($statusStmt) {
-                mysqli_stmt_bind_param($statusStmt, "i", $order['Order_Id']);
-                mysqli_stmt_execute($statusStmt);
-                $statusResult = mysqli_stmt_get_result($statusStmt);
-                while ($ts = mysqli_fetch_assoc($statusResult)) {
-                    $timelineItems[] = $ts;
-                }
-                mysqli_stmt_close($statusStmt);
-            }
+            // Extract timeline from embedded deliveryStatus
+            $timelineItems = $order['deliveryStatus'] ?? [];
             ?>
             <?php if (!empty($timelineItems)): ?>
                 <div class="ord-timeline">
                     <h4>Status Timeline</h4>
                     <?php foreach ($timelineItems as $tl): ?>
                         <div class="timeline-item">
-                            <span><?php echo htmlspecialchars($tl['Dlvry_StatusUpdate']); ?></span>
-                            <span><?php echo date('h:i A - M d', strtotime($tl['Dlvry_DateTime'])); ?></span>
+                            <span><?php echo htmlspecialchars($tl['Dlvry_StatusUpdate'] ?? ''); ?></span>
+                            <span><?php echo isset($tl['Dlvry_DateTime']) ? date('h:i A - M d', strtotime($tl['Dlvry_DateTime'])) : ''; ?></span>
                         </div>
                     <?php endforeach; ?>
                 </div>

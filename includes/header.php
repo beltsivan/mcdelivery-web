@@ -9,7 +9,7 @@ require_once(__DIR__ . '/cart.php');
 $bagCount = 0;
 
 if (isset($_SESSION['Cust_Id'])) {
-    $bagCount = mcd_get_customer_bag_count($conn, (int) $_SESSION['Cust_Id']);
+    $bagCount = mcd_get_customer_bag_count(null, $_SESSION['Cust_Id']);
 } else {
     $bagCount = mcd_get_guest_bag_count();
 }

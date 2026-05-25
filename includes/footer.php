@@ -5,14 +5,12 @@ if (session_status() === PHP_SESSION_NONE) {
 
 require_once(__DIR__ . '/cart.php');
 
-if (isset($_SESSION['Cust_Id']) && !isset($conn)) {
+if (!isset($firebaseInitialized)) {
     require_once(__DIR__ . '/../config/db.php');
 }
 
-$bagItems = [];
-
-if (isset($_SESSION['Cust_Id']) && isset($conn)) {
-    $bagItems = mcd_get_customer_bag_items($conn, (int) $_SESSION['Cust_Id']);
+if (isset($_SESSION['Cust_Id'])) {
+    $bagItems = mcd_get_customer_bag_items(null, $_SESSION['Cust_Id']);
 } else {
     $bagItems = mcd_get_guest_bag_items();
     unset($_SESSION['guest_bag_flash']);
@@ -236,14 +234,14 @@ $grandTotal = $bagTotal + $deliveryFee;
                         <p><?php echo htmlspecialchars($bagItem['name']); ?></p>
                         <div class="qty-controls">
                             <form method="POST" action="update_cart.php" class="qty-form">
-                                <input type="hidden" name="menu_item_id" value="<?php echo (int) $bagItem['id']; ?>">
+                                <input type="hidden" name="cart_item_id" value="<?php echo htmlspecialchars($bagItem['cart_item_id']); ?>">
                                 <input type="hidden" name="action" value="decrease">
                                 <input type="hidden" name="redirect" value="<?php echo htmlspecialchars($_SERVER['REQUEST_URI']); ?>">
                                 <button type="submit" class="qty-btn">&minus;</button>
                             </form>
                             <span class="qty-value"><?php echo (int) $bagItem['quantity']; ?></span>
                             <form method="POST" action="update_cart.php" class="qty-form">
-                                <input type="hidden" name="menu_item_id" value="<?php echo (int) $bagItem['id']; ?>">
+                                <input type="hidden" name="cart_item_id" value="<?php echo htmlspecialchars($bagItem['cart_item_id']); ?>">
                                 <input type="hidden" name="action" value="increase">
                                 <input type="hidden" name="redirect" value="<?php echo htmlspecialchars($_SERVER['REQUEST_URI']); ?>">
                                 <button type="submit" class="qty-btn">+</button>
