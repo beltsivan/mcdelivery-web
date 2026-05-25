@@ -47,7 +47,6 @@ if ($firebaseInitialized) {
                 <li><a href="profile.php">My Profile</a></li>
                 <li><a href="address.php">My Address</a></li>
                 <li><a href="contact.php" class="active">My Contact Number</a></li>
-                <li><a href="#">Coupons</a></li>
             </ul>
         </aside>
 

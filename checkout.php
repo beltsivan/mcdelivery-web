@@ -44,7 +44,8 @@ if (empty($addresses)) {
     exit;
 }
 
-// Process checkout
+    // Process checkout
+$checkoutError = '';
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['address_id'])) {
     $paymentMethod = isset($_POST['payment_method']) ? $_POST['payment_method'] : 'Cash on Delivery';
     $addressId = $_POST['address_id'];
@@ -55,9 +56,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['address_id'])) {
         if ($a['Add_Id'] == $addressId) { $valid = true; break; }
     }
     if (!$valid) {
-        echo '<div class="error-banner">Invalid address selected.</div>';
+        $checkoutError = 'Invalid address selected.';
+    } elseif (!isset($_SESSION['Cust_Brnch_Id'])) {
+        $checkoutError = 'Please select a branch before placing an order.';
     } else {
-        $branchId = isset($_SESSION['Cust_Brnch_Id']) ? $_SESSION['Cust_Brnch_Id'] : null;
+        $branchId = $_SESSION['Cust_Brnch_Id'];
         $orderId = mcd_checkout(null, $custId, $addressId, $paymentMethod, $branchId);
 
         if ($orderId) {
@@ -65,7 +68,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['address_id'])) {
             header('Location: order_success.php?order_id=' . $orderId);
             exit;
         } else {
-            echo '<div class="error-banner">Checkout failed. Please try again.</div>';
+            $checkoutError = 'Checkout failed. Please try again.';
         }
     }
 }
@@ -75,6 +78,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['address_id'])) {
 <div class="reg-container">
     <h1>Checkout</h1>
     <p>Review your order and select a delivery address.</p>
+    <?php if ($checkoutError): ?>
+        <div class="error-banner"><?php echo htmlspecialchars($checkoutError); ?></div>
+    <?php endif; ?>
 
     <div class="reg-card">
         <form method="POST">

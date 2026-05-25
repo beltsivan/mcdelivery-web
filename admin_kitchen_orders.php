@@ -157,6 +157,18 @@
                                         <span>₱<?php echo number_format($item['OrderItem_Total'], 2); ?></span>
                                     </div>
                                 <?php endforeach; ?>
+                                <div class="order-item" style="border-top:1px solid #f0f0f0;padding-top:10px;margin-top:6px;color:#666;">
+                                    <span>Subtotal</span>
+                                    <span>₱<?php echo number_format($order['Order_TotalAmount'] - $order['Order_DeliveryFee'], 2); ?></span>
+                                </div>
+                                <div class="order-item" style="color:#666;">
+                                    <span>Delivery Fee</span>
+                                    <span>₱<?php echo number_format($order['Order_DeliveryFee'], 2); ?></span>
+                                </div>
+                                <div class="order-item" style="font-weight:bold;border-top:1px solid #ddd;padding-top:8px;margin-top:4px;">
+                                    <span>Total</span>
+                                    <span>₱<?php echo number_format($order['Order_TotalAmount'], 2); ?></span>
+                                </div>
                             </div>
                         </div>
                     <?php endforeach; ?>
@@ -192,6 +204,9 @@
                     <strong><?php echo htmlspecialchars(($order['Cust_FName'] ?? '') . ' ' . ($order['Cust_LName'] ?? '')); ?></strong>
                     &nbsp;|&nbsp; Items: <?php echo (int) $order['Order_Quantity']; ?>
                     &nbsp;|&nbsp; Total: ₱<?php echo number_format($order['Order_TotalAmount'], 2); ?>
+                    <?php if (!empty($order['Order_DeliveryFee'])): ?>
+                    &nbsp;|&nbsp; Delivery: ₱<?php echo number_format($order['Order_DeliveryFee'], 2); ?>
+                    <?php endif; ?>
                 </div>
                 <?php if (!empty($order['Add_Street'])): ?>
                     <div class="order-customer" style="font-size:13px;color:#666;">
@@ -219,6 +234,18 @@
                             <span>₱<?php echo number_format($item['OrderItem_Total'], 2); ?></span>
                         </div>
                     <?php endforeach; ?>
+                    <div class="order-item" style="border-top:1px solid #f0f0f0;padding-top:10px;margin-top:6px;color:#666;">
+                        <span>Subtotal</span>
+                        <span>₱<?php echo number_format($order['Order_TotalAmount'] - $order['Order_DeliveryFee'], 2); ?></span>
+                    </div>
+                    <div class="order-item" style="color:#666;">
+                        <span>Delivery Fee</span>
+                        <span>₱<?php echo number_format($order['Order_DeliveryFee'], 2); ?></span>
+                    </div>
+                    <div class="order-item" style="font-weight:bold;border-top:1px solid #ddd;padding-top:8px;margin-top:4px;">
+                        <span>Total</span>
+                        <span>₱<?php echo number_format($order['Order_TotalAmount'], 2); ?></span>
+                    </div>
                 </div>
 
                 <div class="order-actions">

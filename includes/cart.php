@@ -274,21 +274,23 @@ function mcd_checkout($connIgnored, $custId, $addressId, $paymentMethod = 'Cash 
         ];
     }
 
-    // Batch write: create order + delete cart items
-    $batch = $db->batch();
+    try {
+        // Create the order document directly (not batch) to avoid batch/REST issues
+        $orderRef = $db->collection('orders')->newDocument();
+        $orderRef->set($orderData);
 
-    $orderRef = $db->collection('orders')->newDocument();
-    $batch->set($orderRef, $orderData);
-
-    $cartCol = $db->collection('customers')->document($custId)->collection('cartItems');
-    $cartSnapshot = $cartCol->documents();
-    foreach ($cartSnapshot as $cartDoc) {
-        if ($cartDoc->exists()) {
-            $batch->delete($cartDoc->reference());
+        // Delete cart items individually
+        $cartCol = $db->collection('customers')->document($custId)->collection('cartItems');
+        $cartSnapshot = $cartCol->documents();
+        foreach ($cartSnapshot as $cartDoc) {
+            if ($cartDoc->exists()) {
+                $cartDoc->reference()->delete();
+            }
         }
+    } catch (\Exception $e) {
+        error_log('Checkout error: ' . $e->getMessage());
+        return false;
     }
-
-    $batch->commit();
 
     return $orderRef->id();
 }
@@ -342,7 +344,6 @@ function mcd_get_kitchen_orders($connIgnored, $statusFilter = null, $branchId = 
         $query = $query->where('Order_Brnch_Id', '=', (string) $branchId);
     }
 
-    $query = $query->orderBy('Order_OrderDate', 'DESC');
     $snapshot = $query->documents();
 
     foreach ($snapshot as $doc) {
@@ -351,8 +352,8 @@ function mcd_get_kitchen_orders($connIgnored, $statusFilter = null, $branchId = 
         $row['Order_Id'] = $doc->id();
 
         // Items are already embedded — just reference them
+        $embeddedItems = $row['items'] ?? [];
         $row['items'] = [];
-        $embeddedItems = $row['items_raw'] ?? $row['items'] ?? [];
         foreach ($embeddedItems as $idx => $item) {
             $row['items'][] = [
                 'OrderItem_Id' => $doc->id() . '_item_' . $idx,
@@ -368,6 +369,12 @@ function mcd_get_kitchen_orders($connIgnored, $statusFilter = null, $branchId = 
 
         $orders[] = $row;
     }
+
+    usort($orders, function ($a, $b) {
+        $aTime = isset($a['Order_OrderDate']) ? (is_string($a['Order_OrderDate']) ? strtotime($a['Order_OrderDate']) : $a['Order_OrderDate']->get()->format('U')) : 0;
+        $bTime = isset($b['Order_OrderDate']) ? (is_string($b['Order_OrderDate']) ? strtotime($b['Order_OrderDate']) : $b['Order_OrderDate']->get()->format('U')) : 0;
+        return $bTime - $aTime;
+    });
 
     return $orders;
 }
@@ -443,10 +450,9 @@ function mcd_get_customer_orders($connIgnored, $custId) {
     $db = $firestore->database();
     $orders = [];
 
-    $query = $db->collection('orders')
+    $snapshot = $db->collection('orders')
         ->where('Order_Cust_Id', '=', $custId)
-        ->orderBy('Order_OrderDate', 'DESC');
-    $snapshot = $query->documents();
+        ->documents();
 
     foreach ($snapshot as $doc) {
         if (!$doc->exists()) continue;
@@ -463,8 +469,8 @@ function mcd_get_customer_orders($connIgnored, $custId) {
         $row['LatestStatus'] = $latestStatus;
 
         // Build items array from embedded items
-        $row['items'] = [];
         $embeddedItems = $row['items'] ?? [];
+        $row['items'] = [];
         foreach ($embeddedItems as $idx => $item) {
             $row['items'][] = [
                 'OrderItem_Id' => $doc->id() . '_item_' . $idx,
@@ -480,6 +486,12 @@ function mcd_get_customer_orders($connIgnored, $custId) {
 
         $orders[] = $row;
     }
+
+    usort($orders, function ($a, $b) {
+        $aTime = isset($a['Order_OrderDate']) ? (is_string($a['Order_OrderDate']) ? strtotime($a['Order_OrderDate']) : $a['Order_OrderDate']->get()->format('U')) : 0;
+        $bTime = isset($b['Order_OrderDate']) ? (is_string($b['Order_OrderDate']) ? strtotime($b['Order_OrderDate']) : $b['Order_OrderDate']->get()->format('U')) : 0;
+        return $bTime - $aTime;
+    });
 
     return $orders;
 }

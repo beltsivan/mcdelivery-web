@@ -105,6 +105,14 @@ $orders = mcd_get_customer_orders(null, $custId);
                 <?php endforeach; ?>
             </div>
 
+            <div class="ord-total-row" style="padding:6px 0 0;margin-top:6px;border-top:none;font-weight:normal;color:#666;">
+                <span>Subtotal</span>
+                <span>₱<?php echo number_format($order['Order_TotalAmount'] - $order['Order_DeliveryFee'], 2); ?></span>
+            </div>
+            <div class="ord-total-row" style="padding:4px 0;border-top:none;font-weight:normal;color:#666;">
+                <span>Delivery Fee</span>
+                <span>₱<?php echo number_format($order['Order_DeliveryFee'], 2); ?></span>
+            </div>
             <div class="ord-total-row">
                 <span>Total</span>
                 <span>₱<?php echo number_format($order['Order_TotalAmount'], 2); ?></span>
