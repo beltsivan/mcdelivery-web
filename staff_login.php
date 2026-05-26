@@ -18,47 +18,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'Firebase not configured.';
     } else {
         try {
-            // Use Firebase Auth REST API to verify credentials
-            $url = "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=$firebaseApiKey";
-            $payload = json_encode([
-                'email' => $email,
-                'password' => $password,
-                'returnSecureToken' => true,
-            ]);
+            $result = $auth->signInWithEmailAndPassword($email, $password);
+            $uid = $result->firebaseUserId();
 
-            $ch = curl_init($url);
-            curl_setopt($ch, CURLOPT_POST, true);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
-            curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            $response = curl_exec($ch);
-            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            curl_close($ch);
+            // Read staff data from Firestore
+            $db = $firestore->database();
+            $staffDoc = $db->collection('staff')->document($uid)->snapshot();
 
-            $data = json_decode($response, true);
+            if ($staffDoc->exists()) {
+                $staff = $staffDoc->data();
+                $_SESSION['Staff_Id'] = $uid;
+                $_SESSION['Staff_FName'] = $staff['Staff_FName'] ?? '';
+                $_SESSION['Staff_LName'] = $staff['Staff_LName'] ?? '';
+                $_SESSION['Staff_Role'] = $staff['Staff_Role'] ?? 'Staff';
+                $_SESSION['Staff_Email'] = $staff['Staff_Email'] ?? $email;
+                $_SESSION['Staff_Brnch_Id'] = $staff['Staff_Brnch_Id'] ?? null;
 
-            if ($httpCode === 200 && isset($data['idToken'])) {
-                $verifiedToken = $auth->verifyIdToken($data['idToken']);
-                $uid = $verifiedToken->claims()->get('sub');
-
-                // Read staff data from Firestore
-                $db = $firestore->database();
-                $staffDoc = $db->collection('staff')->document($uid)->snapshot();
-
-                if ($staffDoc->exists()) {
-                    $staff = $staffDoc->data();
-                    $_SESSION['Staff_Id'] = $uid;
-                    $_SESSION['Staff_FName'] = $staff['Staff_FName'] ?? '';
-                    $_SESSION['Staff_LName'] = $staff['Staff_LName'] ?? '';
-                    $_SESSION['Staff_Role'] = $staff['Staff_Role'] ?? 'Staff';
-                    $_SESSION['Staff_Email'] = $staff['Staff_Email'] ?? $email;
-                    $_SESSION['Staff_Brnch_Id'] = $staff['Staff_Brnch_Id'] ?? null;
-
-                    header('Location: admin_dashboard.php');
-                    exit;
-                } else {
-                    $error = 'Staff account not found.';
-                }
+                header('Location: admin_dashboard.php');
+                exit;
+            } else {
+                $error = 'Staff account not found.';
+            }
+        } catch (\Kreait\Firebase\Auth\SignIn\FailedToSignIn $e) {
+            $errorMsg = $e->getMessage();
+            if (strpos($errorMsg, 'EMAIL_NOT_FOUND') !== false) {
+                $error = "No account found with that email.";
+            } elseif (strpos($errorMsg, 'INVALID_PASSWORD') !== false) {
+                $error = "Wrong password.";
+            } elseif (strpos($errorMsg, 'INVALID_LOGIN_CREDENTIALS') !== false) {
+                $error = "Invalid email or password.";
+            } elseif (strpos($errorMsg, 'USER_DISABLED') !== false) {
+                $error = "Account is disabled.";
             } else {
                 $error = 'Invalid email or password.';
             }

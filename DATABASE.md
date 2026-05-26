@@ -56,16 +56,30 @@ CREATE TABLE McdoMenuItem (
     Menu_Available BOOLEAN DEFAULT 1
 );
 
+-- 9. McdoCoupon (Created before McOrder because of FK)
+CREATE TABLE McdoCoupon (
+    Coupn_Id INT AUTO_INCREMENT PRIMARY KEY,
+    Coupn_Code VARCHAR(50) UNIQUE,
+    Coupn_Description TEXT,
+    Coupn_DiscountValue DECIMAL(10,2),
+    Coupn_MinOrderAmount DECIMAL(10,2),
+    Coupn_MaxDiscount DECIMAL(10,2),
+    Coupn_ExpiryDate DATE,
+    Coupn_IsActive BOOLEAN DEFAULT 1
+);
+
 -- 7. McOrder
 CREATE TABLE McOrder (
     Order_Id INT AUTO_INCREMENT PRIMARY KEY,
     Order_Cust_Id INT,
+    Order_Coup_Id INT NULL,
     Order_OrderDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     Order_Status VARCHAR(50),
     Order_TotalAmount DECIMAL(10,2),
     Order_Quantity INT,
     Order_DeliveryFee DECIMAL(10,2),
-    FOREIGN KEY (Order_Cust_Id) REFERENCES Customer(Cust_Id)
+    FOREIGN KEY (Order_Cust_Id) REFERENCES Customer(Cust_Id),
+    FOREIGN KEY (Order_Coup_Id) REFERENCES McdoCoupon(Coupn_Id)
 );
 
 -- 6. CartItem
@@ -116,3 +130,26 @@ CREATE TABLE Payment (
 ALTER TABLE mcorder ADD COLUMN Order_Brnch_Id INT NULL AFTER Order_Add_Id;
 -- 2. Convert non-system-admin Admin accounts to Manager role
 UPDATE staff SET Staff_Role = 'Manager' WHERE Staff_Email != 'admin@gmail.com' AND Staff_Role = 'Admin';
+
+
+admin:
+admin@gmail.com
+admin123
+
+staff{
+john@gmail.com 
+john123
+
+staff2@gmail.com
+staff123
+}
+
+
+managers:
+manager2@gmail.com
+manager3@gmail.com (jagobiao branch)
+manager123
+
+meloy@gmail.com (consolacion national road branch)
+meloy123
+

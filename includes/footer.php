@@ -233,19 +233,23 @@ $grandTotal = $bagTotal + $deliveryFee;
                     <div class="item-details">
                         <p><?php echo htmlspecialchars($bagItem['name']); ?></p>
                         <div class="qty-controls">
+                            <?php if (isset($_SESSION['Cust_Id'])): ?>
                             <form method="POST" action="update_cart.php" class="qty-form">
                                 <input type="hidden" name="cart_item_id" value="<?php echo htmlspecialchars($bagItem['cart_item_id']); ?>">
                                 <input type="hidden" name="action" value="decrease">
                                 <input type="hidden" name="redirect" value="<?php echo htmlspecialchars($_SERVER['REQUEST_URI']); ?>">
                                 <button type="submit" class="qty-btn">&minus;</button>
                             </form>
+                            <?php endif; ?>
                             <span class="qty-value"><?php echo (int) $bagItem['quantity']; ?></span>
+                            <?php if (isset($_SESSION['Cust_Id'])): ?>
                             <form method="POST" action="update_cart.php" class="qty-form">
                                 <input type="hidden" name="cart_item_id" value="<?php echo htmlspecialchars($bagItem['cart_item_id']); ?>">
                                 <input type="hidden" name="action" value="increase">
                                 <input type="hidden" name="redirect" value="<?php echo htmlspecialchars($_SERVER['REQUEST_URI']); ?>">
                                 <button type="submit" class="qty-btn">+</button>
                             </form>
+                            <?php endif; ?>
                         </div>
                         <span class="unit-price">₱<?php echo number_format($bagItem['price'], 2); ?> each</span>
                     </div>
