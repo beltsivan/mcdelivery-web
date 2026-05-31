@@ -7,6 +7,7 @@
     aspect-ratio: 16 / 5;
     background-color: #eee;
     border-radius: 15px;
+    max-height: 400px;
 }
 
 .slider {

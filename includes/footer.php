@@ -67,21 +67,33 @@ $grandTotal = $bagTotal + $deliveryFee;
         /* The Sidebar */
 .side-bag {
     position: fixed;
-    /* Change this to match your header's height */
-    top: 80px; 
-    
+    top: 80px;
     right: -400px;
     width: 400px;
-    
-    /* Calculate height: 100% of viewport minus the header height */
-    height: calc(100vh - 80px); 
-    
+    height: calc(100vh - 80px);
     background-color: white;
-    z-index: 999; /* Slightly lower than header if header is 1000 */
+    z-index: 999;
     box-shadow: -5px 5px 15px rgba(0,0,0,0.1);
     display: flex;
     flex-direction: column;
     transition: right 0.3s ease-in-out;
+}
+
+@media (max-width: 480px) {
+    .side-bag {
+        width: 100%;
+        right: -100%;
+    }
+    .bag-item {
+        gap: 8px;
+    }
+    .bag-item img {
+        width: 48px;
+        height: 48px;
+    }
+    .item-details p {
+        font-size: 13px;
+    }
 }
 
 /* Slide in state */

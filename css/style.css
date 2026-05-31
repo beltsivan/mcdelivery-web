@@ -77,12 +77,6 @@ header {
     min-width: 0;
 }
 
-nav {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-}
-
 nav a {
     text-decoration: none;
     color: #292929;
@@ -92,13 +86,11 @@ nav a {
 
 .login-btn {
     background-color: #ffbc0d;
-    /* McDo Yellow */
     padding: 1px 2px;
     border-radius: 5px;
     color: #292929;
 }
 
-/* Bag/Cart Icon */
 nav img[alt="bag"] {
     height: 25px;
     cursor: pointer;
@@ -269,11 +261,11 @@ nav img[alt="bag"] {
     }
 }
 
-.search-bar input {
-    width: 400px;
+.search-bar input[type="text"] {
     padding: 10px;
-    border-radius: 5px;
+    border-radius: 5px 0 0 5px;
     border: none;
+    min-width: 0;
 }
 
 .specials {
@@ -282,7 +274,7 @@ nav img[alt="bag"] {
 
 .product-grid {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: 25px;
     margin-top: 20px;
     justify-content: center;
