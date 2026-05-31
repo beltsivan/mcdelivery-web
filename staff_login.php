@@ -14,30 +14,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = trim($_POST['email']);
     $password = $_POST['password'];
 
-    $stmt = mysqli_prepare($conn, "SELECT * FROM staff WHERE Staff_Email = ? LIMIT 1");
+    if (!$firebaseInitialized) {
+        $error = 'Firebase not configured.';
+    } else {
+        try {
+            $result = $auth->signInWithEmailAndPassword($email, $password);
+            $uid = $result->firebaseUserId();
 
-    if ($stmt) {
-        mysqli_stmt_bind_param($stmt, "s", $email);
-        mysqli_stmt_execute($stmt);
-        $result = mysqli_stmt_get_result($stmt);
-        $staff = mysqli_fetch_assoc($result);
-        mysqli_stmt_close($stmt);
+            // Read staff data from Firestore
+            $db = $firestore->database();
+            $staffDoc = $db->collection('staff')->document($uid)->snapshot();
 
-        if ($staff && $password === $staff['Staff_Password']) {
-            $_SESSION['Staff_Id'] = (int) $staff['Staff_Id'];
-            $_SESSION['Staff_FName'] = $staff['Staff_FName'];
-            $_SESSION['Staff_LName'] = $staff['Staff_LName'];
-            $_SESSION['Staff_Role'] = $staff['Staff_Role'];
-            $_SESSION['Staff_Email'] = $staff['Staff_Email'];
-            $_SESSION['Staff_Brnch_Id'] = $staff['Staff_Brnch_Id'] ? (int) $staff['Staff_Brnch_Id'] : null;
+            if ($staffDoc->exists()) {
+                $staff = $staffDoc->data();
+                $_SESSION['Staff_Id'] = $uid;
+                $_SESSION['Staff_FName'] = $staff['Staff_FName'] ?? '';
+                $_SESSION['Staff_LName'] = $staff['Staff_LName'] ?? '';
+                $_SESSION['Staff_Role'] = $staff['Staff_Role'] ?? 'Staff';
+                $_SESSION['Staff_Email'] = $staff['Staff_Email'] ?? $email;
+                $_SESSION['Staff_Brnch_Id'] = $staff['Staff_Brnch_Id'] ?? null;
 
-            header('Location: admin_dashboard.php');
-            exit;
-        } else {
+                header('Location: admin_dashboard.php');
+                exit;
+            } else {
+                $error = 'Staff account not found.';
+            }
+        } catch (\Kreait\Firebase\Auth\SignIn\FailedToSignIn $e) {
+            $errorMsg = $e->getMessage();
+            if (strpos($errorMsg, 'EMAIL_NOT_FOUND') !== false) {
+                $error = "No account found with that email.";
+            } elseif (strpos($errorMsg, 'INVALID_PASSWORD') !== false) {
+                $error = "Wrong password.";
+            } elseif (strpos($errorMsg, 'INVALID_LOGIN_CREDENTIALS') !== false) {
+                $error = "Invalid email or password.";
+            } elseif (strpos($errorMsg, 'USER_DISABLED') !== false) {
+                $error = "Account is disabled.";
+            } else {
+                $error = 'Invalid email or password.';
+            }
+        } catch (\Exception $e) {
             $error = 'Invalid email or password.';
         }
-    } else {
-        $error = 'Database error.';
     }
 }
 ?>

@@ -9,100 +9,92 @@ function mcd_normalize_image_path($imagePath) {
     return $imagePath;
 }
 
-function mcd_get_customer_bag_count($conn, $custId) {
-    $stmt = mysqli_prepare($conn, "SELECT COALESCE(SUM(Cart_Quantity), 0) AS item_count FROM cartitem WHERE Cart_Cust_Id = ?");
+function mcd_get_customer_bag_count($connIgnored, $custId) {
+    global $firestore;
+    $db = $firestore->database();
 
-    if (!$stmt) {
-        return 0;
+    $snapshot = $db->collection('customers')
+        ->document($custId)
+        ->collection('cartItems')
+        ->documents();
+
+    $count = 0;
+    foreach ($snapshot as $doc) {
+        $data = $doc->data();
+        $count += (int) ($data['Cart_Quantity'] ?? 0);
     }
 
-    mysqli_stmt_bind_param($stmt, "i", $custId);
-    mysqli_stmt_execute($stmt);
-    $result = mysqli_stmt_get_result($stmt);
-    $row = mysqli_fetch_assoc($result);
-    mysqli_stmt_close($stmt);
-
-    return isset($row['item_count']) ? (int) $row['item_count'] : 0;
+    return $count;
 }
 
-function mcd_get_customer_bag_items($conn, $custId) {
+function mcd_get_customer_bag_items($connIgnored, $custId) {
+    global $firestore;
+    $db = $firestore->database();
     $items = [];
-    $sql = "SELECT c.Cart_Menu_MenuItemId, c.Cart_Quantity, c.Cart_ItemPrice, c.Cart_Total, m.Menu_Name, m.Menu_ImageURL
-            FROM cartitem c
-            INNER JOIN mcdomenuitem m ON m.Menu_MenuItemId = c.Cart_Menu_MenuItemId
-            WHERE c.Cart_Cust_Id = ?
-            ORDER BY c.Cart_Id ASC";
-    $stmt = mysqli_prepare($conn, $sql);
 
-    if (!$stmt) {
-        return $items;
-    }
+    $snapshot = $db->collection('customers')
+        ->document($custId)
+        ->collection('cartItems')
+        ->documents();
 
-    mysqli_stmt_bind_param($stmt, "i", $custId);
-    mysqli_stmt_execute($stmt);
-    $result = mysqli_stmt_get_result($stmt);
-
-    while ($row = mysqli_fetch_assoc($result)) {
+    foreach ($snapshot as $doc) {
+        $data = $doc->data();
         $items[] = [
-            'id' => (int) $row['Cart_Menu_MenuItemId'],
-            'name' => $row['Menu_Name'],
-            'price' => (float) $row['Cart_ItemPrice'],
-            'image' => $row['Menu_ImageURL'],
-            'quantity' => (int) $row['Cart_Quantity'],
-            'total' => (float) $row['Cart_Total'],
+            'id' => (int) ($data['Cart_Menu_MenuItemId'] ?? 0),
+            'name' => $data['Menu_Name'] ?? '',
+            'price' => (float) ($data['Cart_ItemPrice'] ?? 0),
+            'image' => $data['Menu_ImageURL'] ?? '',
+            'quantity' => (int) ($data['Cart_Quantity'] ?? 0),
+            'total' => (float) ($data['Cart_Total'] ?? 0),
+            'cart_item_id' => $doc->id(),
         ];
     }
-
-    mysqli_stmt_close($stmt);
 
     return $items;
 }
 
-function mcd_add_customer_bag_item($conn, $custId, $product) {
+function mcd_add_customer_bag_item($connIgnored, $custId, $product) {
+    global $firestore;
+    $db = $firestore->database();
+    $cartCol = $db->collection('customers')->document($custId)->collection('cartItems');
+
     $menuItemId = (int) $product['Menu_MenuItemId'];
     $price = (float) $product['Menu_Price'];
-    $stmt = mysqli_prepare($conn, "SELECT Cart_Id, Cart_Quantity FROM cartitem WHERE Cart_Cust_Id = ? AND Cart_Menu_MenuItemId = ? LIMIT 1");
 
-    if (!$stmt) {
-        return false;
-    }
-
-    mysqli_stmt_bind_param($stmt, "ii", $custId, $menuItemId);
-    mysqli_stmt_execute($stmt);
-    $result = mysqli_stmt_get_result($stmt);
-    $existingItem = mysqli_fetch_assoc($result);
-    mysqli_stmt_close($stmt);
-
-    if ($existingItem) {
-        $cartId = (int) $existingItem['Cart_Id'];
-        $quantity = ((int) $existingItem['Cart_Quantity']) + 1;
-        $total = $price * $quantity;
-        $updateStmt = mysqli_prepare($conn, "UPDATE cartitem SET Cart_Quantity = ?, Cart_ItemPrice = ?, Cart_Total = ? WHERE Cart_Id = ? AND Cart_Cust_Id = ?");
-
-        if (!$updateStmt) {
-            return false;
+    // Check if item already in cart by iterating all items
+    $snapshot = $cartCol->documents();
+    $existingDoc = null;
+    foreach ($snapshot as $doc) {
+        if ($doc->exists() && (int) ($doc->data()['Cart_Menu_MenuItemId'] ?? 0) === $menuItemId) {
+            $existingDoc = $doc;
+            break;
         }
-
-        mysqli_stmt_bind_param($updateStmt, "iddii", $quantity, $price, $total, $cartId, $custId);
-        $success = mysqli_stmt_execute($updateStmt);
-        mysqli_stmt_close($updateStmt);
-
-        return $success;
     }
 
-    $quantity = 1;
-    $total = $price;
-    $insertStmt = mysqli_prepare($conn, "INSERT INTO cartitem (Cart_Cust_Id, Cart_Menu_MenuItemId, Cart_Quantity, Cart_ItemPrice, Cart_Total) VALUES (?, ?, ?, ?, ?)");
-
-    if (!$insertStmt) {
-        return false;
+    if ($existingDoc) {
+        $data = $existingDoc->data();
+        $quantity = ((int) ($data['Cart_Quantity'] ?? 0)) + 1;
+        $total = $price * $quantity;
+        $existingDoc->reference()->set([
+            'Cart_Quantity' => $quantity,
+            'Cart_ItemPrice' => $price,
+            'Cart_Total' => $total,
+        ], ['merge' => true]);
+        return true;
     }
 
-    mysqli_stmt_bind_param($insertStmt, "iiidd", $custId, $menuItemId, $quantity, $price, $total);
-    $success = mysqli_stmt_execute($insertStmt);
-    mysqli_stmt_close($insertStmt);
+    // Add new item
+    $cartCol->add([
+        'Cart_Cust_Id' => $custId,
+        'Cart_Menu_MenuItemId' => (string) $menuItemId,
+        'Cart_Quantity' => 1,
+        'Cart_ItemPrice' => $price,
+        'Cart_Total' => $price,
+        'Menu_Name' => $product['Menu_Name'] ?? '',
+        'Menu_ImageURL' => $product['Menu_ImageURL'] ?? '',
+    ]);
 
-    return $success;
+    return true;
 }
 
 function mcd_get_guest_bag_items() {
@@ -121,26 +113,18 @@ function mcd_get_guest_bag_count() {
     return (int) $_SESSION['guest_bag_flash']['quantity'];
 }
 
-function mcd_update_cart_quantity($conn, $custId, $menuItemId, $action) {
-    $menuItemId = (int) $menuItemId;
-    $stmt = mysqli_prepare($conn, "SELECT Cart_Id, Cart_Quantity FROM cartitem WHERE Cart_Cust_Id = ? AND Cart_Menu_MenuItemId = ? LIMIT 1");
+function mcd_update_cart_quantity($connIgnored, $custId, $cartItemId, $action) {
+    global $firestore;
+    $db = $firestore->database();
+    $docRef = $db->collection('customers')->document($custId)->collection('cartItems')->document($cartItemId);
 
-    if (!$stmt) {
+    $doc = $docRef->snapshot();
+    if (!$doc->exists()) {
         return false;
     }
 
-    mysqli_stmt_bind_param($stmt, "ii", $custId, $menuItemId);
-    mysqli_stmt_execute($stmt);
-    $result = mysqli_stmt_get_result($stmt);
-    $existingItem = mysqli_fetch_assoc($result);
-    mysqli_stmt_close($stmt);
-
-    if (!$existingItem) {
-        return false;
-    }
-
-    $cartId = (int) $existingItem['Cart_Id'];
-    $currentQty = (int) $existingItem['Cart_Quantity'];
+    $data = $doc->data();
+    $currentQty = (int) ($data['Cart_Quantity'] ?? 0);
 
     if ($action === 'increase') {
         $newQty = $currentQty + 1;
@@ -151,49 +135,49 @@ function mcd_update_cart_quantity($conn, $custId, $menuItemId, $action) {
     }
 
     if ($newQty <= 0) {
-        $deleteStmt = mysqli_prepare($conn, "DELETE FROM cartitem WHERE Cart_Id = ? AND Cart_Cust_Id = ?");
-        mysqli_stmt_bind_param($deleteStmt, "ii", $cartId, $custId);
-        $success = mysqli_stmt_execute($deleteStmt);
-        mysqli_stmt_close($deleteStmt);
-        return $success;
+        $docRef->delete();
+        return true;
     }
 
-    $stmtPrice = mysqli_prepare($conn, "SELECT Menu_Price FROM mcdomenuitem WHERE Menu_MenuItemId = ? LIMIT 1");
-    mysqli_stmt_bind_param($stmtPrice, "i", $menuItemId);
-    mysqli_stmt_execute($stmtPrice);
-    $priceResult = mysqli_stmt_get_result($stmtPrice);
-    $priceRow = mysqli_fetch_assoc($priceResult);
-    mysqli_stmt_close($stmtPrice);
+    $docRef->set([
+        'Cart_Quantity' => $newQty,
+        'Cart_ItemPrice' => $data['Cart_ItemPrice'] ?? 0,
+        'Cart_Total' => ($data['Cart_ItemPrice'] ?? 0) * $newQty,
+    ], ['merge' => true]);
 
-    $price = $priceRow ? (float) $priceRow['Menu_Price'] : 0;
-    $newTotal = $price * $newQty;
-
-    $updateStmt = mysqli_prepare($conn, "UPDATE cartitem SET Cart_Quantity = ?, Cart_ItemPrice = ?, Cart_Total = ? WHERE Cart_Id = ? AND Cart_Cust_Id = ?");
-    mysqli_stmt_bind_param($updateStmt, "iddii", $newQty, $price, $newTotal, $cartId, $custId);
-    $success = mysqli_stmt_execute($updateStmt);
-    mysqli_stmt_close($updateStmt);
-
-    return $success;
+    return true;
 }
 
-function mcd_get_payment_info($conn, $orderId) {
-    $stmt = mysqli_prepare($conn, "SELECT * FROM payment WHERE Pay_Order_Id = ? LIMIT 1");
+function mcd_get_payment_info($connIgnored, $orderId) {
+    global $firestore;
+    $db = $firestore->database();
 
-    if (!$stmt) {
+    $doc = $db->collection('orders')->document((string) $orderId)->snapshot();
+
+    if (!$doc->exists()) {
         return null;
     }
 
-    mysqli_stmt_bind_param($stmt, "i", $orderId);
-    mysqli_stmt_execute($stmt);
-    $result = mysqli_stmt_get_result($stmt);
-    $payment = mysqli_fetch_assoc($result);
-    mysqli_stmt_close($stmt);
+    $data = $doc->data();
+    $payment = $data['payment'] ?? [];
 
-    return $payment;
+    return [
+        'Pay_Id' => $orderId . '_payment',
+        'Pay_Order_Id' => (string) $orderId,
+        'Pay_PaymentType' => $payment['Pay_PaymentType'] ?? '',
+        'Pay_PaymentStatus' => $payment['Pay_PaymentStatus'] ?? '',
+        'Pay_PaidAmount' => $payment['Pay_PaidAmount'] ?? 0,
+        'Pay_TransactionDate' => $payment['Pay_TransactionDate'] ?? null,
+    ];
 }
 
-function mcd_checkout($conn, $custId, $addressId, $paymentMethod = 'Cash on Delivery', $branchId = null) {
-    $cartItems = mcd_get_customer_bag_items($conn, $custId);
+function mcd_checkout($connIgnored, $custId, $addressId, $paymentMethod = 'Cash on Delivery', $branchId = null) {
+    global $firestore, $firebaseInitialized;
+    if (!$firebaseInitialized) return false;
+
+    $db = $firestore->database();
+
+    $cartItems = mcd_get_customer_bag_items(null, $custId);
 
     if (empty($cartItems)) {
         return false;
@@ -210,202 +194,304 @@ function mcd_checkout($conn, $custId, $addressId, $paymentMethod = 'Cash on Deli
     $deliveryFee = 49;
     $grandTotal = $subtotal + $deliveryFee;
 
-    $stmt = mysqli_prepare($conn, "INSERT INTO mcorder (Order_Cust_Id, Order_OrderDate, Order_Status, Order_TotalAmount, Order_Quantity, Order_DeliveryFee, Order_Add_Id, Order_Brnch_Id) VALUES (?, NOW(), 'Pending', ?, ?, ?, ?, ?)");
-
-    if (!$stmt) {
-        return false;
+    // Get branch info for denormalization
+    $branchInfo = [];
+    if ($branchId) {
+        $branchDoc = $db->collection('branches')->document((string) $branchId)->snapshot();
+        if ($branchDoc->exists()) {
+            $branchInfo = $branchDoc->data();
+        }
     }
 
-    mysqli_stmt_bind_param($stmt, "iddiii", $custId, $grandTotal, $totalQuantity, $deliveryFee, $addressId, $branchId);
-    $orderCreated = mysqli_stmt_execute($stmt);
-    $orderId = mysqli_stmt_insert_id($stmt);
-    mysqli_stmt_close($stmt);
+    // Get customer info for denormalization
+    $customerDoc = $db->collection('customers')->document($custId)->snapshot();
+    $customerData = $customerDoc->exists() ? $customerDoc->data() : [];
 
-    if (!$orderCreated) {
-        return false;
+    // Get address info for denormalization
+    $addressInfo = [];
+    if ($addressId) {
+        $addressDoc = $db->collection('addresses')->document((string) $addressId)->snapshot();
+        if ($addressDoc->exists()) {
+            $addressInfo = $addressDoc->data();
+        }
     }
 
     $payStatus = ($paymentMethod === 'Cash on Delivery') ? 'Pending' : 'Done';
 
-    $payStmt = mysqli_prepare($conn, "INSERT INTO payment (Pay_Order_Id, Pay_PaymentType, Pay_PaymentStatus, Pay_PaidAmount) VALUES (?, ?, ?, ?)");
-    mysqli_stmt_bind_param($payStmt, "issd", $orderId, $paymentMethod, $payStatus, $grandTotal);
-    mysqli_stmt_execute($payStmt);
-    mysqli_stmt_close($payStmt);
+    $now = new \Google\Cloud\Core\Timestamp(new \DateTime());
 
-    $dlvryStmt = mysqli_prepare($conn, "INSERT INTO mcdeliverystatus (Dlvry_Order_Id, Dlvry_StatusUpdate) VALUES (?, 'Order Placed')");
-    mysqli_stmt_bind_param($dlvryStmt, "i", $orderId);
-    mysqli_stmt_execute($dlvryStmt);
-    mysqli_stmt_close($dlvryStmt);
+    // Build the order document with embedded items, payment, deliveryStatus
+    $orderData = [
+        'Order_Cust_Id' => $custId,
+        'Order_Add_Id' => (string) $addressId,
+        'Order_Brnch_Id' => $branchId ? (string) $branchId : null,
+        'Order_OrderDate' => $now,
+        'Order_Status' => 'Pending',
+        'Order_TotalAmount' => $grandTotal,
+        'Order_Quantity' => $totalQuantity,
+        'Order_DeliveryFee' => $deliveryFee,
+        'Order_PrepTime' => 0,
+        // Denormalized customer info
+        'Cust_FName' => $customerData['Cust_FName'] ?? '',
+        'Cust_LName' => $customerData['Cust_LName'] ?? '',
+        // Denormalized address info
+        'Add_Street' => $addressInfo['Add_Street'] ?? '',
+        'Add_Barangay' => $addressInfo['Add_Barangay'] ?? '',
+        'Add_City' => $addressInfo['Add_City'] ?? '',
+        'Add_Municipality' => $addressInfo['Add_Municipality'] ?? '',
+        'Add_PostalCode' => $addressInfo['Add_PostalCode'] ?? '',
+        // Denormalized branch info
+        'Brnch_Name' => $branchInfo['Brnch_Name'] ?? '',
+        'Brnch_Street' => $branchInfo['Brnch_Street'] ?? '',
+        'Brnch_City' => $branchInfo['Brnch_City'] ?? '',
+        // Embedded items array
+        'items' => [],
+        // Embedded payment object
+        'payment' => [
+            'Pay_PaymentType' => $paymentMethod,
+            'Pay_PaymentStatus' => $payStatus,
+            'Pay_PaidAmount' => $grandTotal,
+            'Pay_TransactionDate' => $now,
+        ],
+        // Embedded delivery status array
+        'deliveryStatus' => [
+            [
+                'Dlvry_StatusUpdate' => 'Order Placed',
+                'Dlvry_DateTime' => $now,
+            ],
+        ],
+    ];
 
-    $itemStmt = mysqli_prepare($conn, "INSERT INTO orderitem (OrderItem_Order_Id, OrderItem_MenuItemId, OrderItem_Quantity, OrderItem_Price, OrderItem_Total) VALUES (?, ?, ?, ?, ?)");
-
-    if ($itemStmt) {
-        foreach ($cartItems as $item) {
-            mysqli_stmt_bind_param($itemStmt, "iiidd", $orderId, $item['id'], $item['quantity'], $item['price'], $item['total']);
-            mysqli_stmt_execute($itemStmt);
-        }
-        mysqli_stmt_close($itemStmt);
+    // Build embedded items
+    foreach ($cartItems as $item) {
+        $orderData['items'][] = [
+            'OrderItem_MenuItemId' => (string) $item['id'],
+            'Menu_Name' => $item['name'],
+            'Menu_ImageURL' => $item['image'],
+            'OrderItem_Quantity' => $item['quantity'],
+            'OrderItem_Price' => $item['price'],
+            'OrderItem_Total' => $item['total'],
+        ];
     }
 
-    $clearStmt = mysqli_prepare($conn, "DELETE FROM cartitem WHERE Cart_Cust_Id = ?");
-    mysqli_stmt_bind_param($clearStmt, "i", $custId);
-    mysqli_stmt_execute($clearStmt);
-    mysqli_stmt_close($clearStmt);
+    try {
+        // Create the order document directly (not batch) to avoid batch/REST issues
+        $orderRef = $db->collection('orders')->newDocument();
+        $orderRef->set($orderData);
 
-    return $orderId;
+        // Delete cart items individually
+        $cartCol = $db->collection('customers')->document($custId)->collection('cartItems');
+        $cartSnapshot = $cartCol->documents();
+        foreach ($cartSnapshot as $cartDoc) {
+            if ($cartDoc->exists()) {
+                $cartDoc->reference()->delete();
+            }
+        }
+    } catch (\Exception $e) {
+        error_log('Checkout error: ' . $e->getMessage());
+        return false;
+    }
+
+    return $orderRef->id();
 }
 
-function mcd_get_order_items($conn, $orderId) {
+function mcd_get_order_items($connIgnored, $orderId) {
+    global $firestore;
+    $db = $firestore->database();
     $items = [];
-    $stmt = mysqli_prepare($conn, "SELECT oi.*, m.Menu_Name, m.Menu_ImageURL FROM orderitem oi INNER JOIN mcdomenuitem m ON m.Menu_MenuItemId = oi.OrderItem_MenuItemId WHERE oi.OrderItem_Order_Id = ?");
 
-    if (!$stmt) {
+    $doc = $db->collection('orders')->document((string) $orderId)->snapshot();
+
+    if (!$doc->exists()) {
         return $items;
     }
 
-    mysqli_stmt_bind_param($stmt, "i", $orderId);
-    mysqli_stmt_execute($stmt);
-    $result = mysqli_stmt_get_result($stmt);
+    $data = $doc->data();
+    $embeddedItems = $data['items'] ?? [];
 
-    while ($row = mysqli_fetch_assoc($result)) {
-        $items[] = $row;
+    foreach ($embeddedItems as $idx => $item) {
+        $items[] = [
+            'OrderItem_Id' => $orderId . '_item_' . $idx,
+            'OrderItem_Order_Id' => (string) $orderId,
+            'OrderItem_MenuItemId' => $item['OrderItem_MenuItemId'] ?? '',
+            'Menu_Name' => $item['Menu_Name'] ?? '',
+            'Menu_ImageURL' => $item['Menu_ImageURL'] ?? '',
+            'OrderItem_Quantity' => $item['OrderItem_Quantity'] ?? 0,
+            'OrderItem_Price' => $item['OrderItem_Price'] ?? 0,
+            'OrderItem_Total' => $item['OrderItem_Total'] ?? 0,
+        ];
     }
-
-    mysqli_stmt_close($stmt);
 
     return $items;
 }
 
-function mcd_get_kitchen_orders($conn, $statusFilter = null, $branchId = null) {
+function mcd_get_kitchen_orders($connIgnored, $statusFilter = null, $branchId = null) {
+    global $firestore;
+    $db = $firestore->database();
     $orders = [];
-    $sql = "SELECT o.*, c.Cust_FName, c.Cust_LName, a.Add_Street, a.Add_Barangay, a.Add_City, a.Add_Municipality, a.Add_PostalCode FROM mcorder o INNER JOIN customer c ON c.Cust_Id = o.Order_Cust_Id LEFT JOIN address a ON a.Add_Id = o.Order_Add_Id";
 
-    $conditions = [];
-    $params = [];
-    $types = '';
+    $query = $db->collection('orders');
 
     if ($statusFilter) {
         if (is_array($statusFilter)) {
-            $placeholders = implode(',', array_fill(0, count($statusFilter), '?'));
-            $conditions[] = "o.Order_Status IN ($placeholders)";
-            foreach ($statusFilter as $sf) {
-                $params[] = $sf;
-                $types .= 's';
-            }
+            $query = $query->where('Order_Status', 'in', $statusFilter);
         } else {
-            $conditions[] = "o.Order_Status = ?";
-            $params[] = $statusFilter;
-            $types .= 's';
+            $query = $query->where('Order_Status', '=', $statusFilter);
         }
     }
 
     if ($branchId !== null) {
-        $conditions[] = "o.Order_Brnch_Id = ?";
-        $params[] = $branchId;
-        $types .= 'i';
+        $query = $query->where('Order_Brnch_Id', '=', (string) $branchId);
     }
 
-    if (!empty($conditions)) {
-        $sql .= " WHERE " . implode(" AND ", $conditions);
-    }
+    $snapshot = $query->documents();
 
-    $sql .= " ORDER BY o.Order_OrderDate DESC";
+    foreach ($snapshot as $doc) {
+        if (!$doc->exists()) continue;
+        $row = $doc->data();
+        $row['Order_Id'] = $doc->id();
 
-    $stmt = mysqli_prepare($conn, $sql);
+        // Items are already embedded — just reference them
+        $embeddedItems = $row['items'] ?? [];
+        $row['items'] = [];
+        foreach ($embeddedItems as $idx => $item) {
+            $row['items'][] = [
+                'OrderItem_Id' => $doc->id() . '_item_' . $idx,
+                'OrderItem_Order_Id' => $doc->id(),
+                'OrderItem_MenuItemId' => $item['OrderItem_MenuItemId'] ?? '',
+                'Menu_Name' => $item['Menu_Name'] ?? '',
+                'Menu_ImageURL' => $item['Menu_ImageURL'] ?? '',
+                'OrderItem_Quantity' => $item['OrderItem_Quantity'] ?? 0,
+                'OrderItem_Price' => $item['OrderItem_Price'] ?? 0,
+                'OrderItem_Total' => $item['OrderItem_Total'] ?? 0,
+            ];
+        }
 
-    if (!$stmt) {
-        return $orders;
-    }
-
-    if (!empty($params)) {
-        mysqli_stmt_bind_param($stmt, $types, ...$params);
-    }
-
-    mysqli_stmt_execute($stmt);
-    $result = mysqli_stmt_get_result($stmt);
-
-    while ($row = mysqli_fetch_assoc($result)) {
-        $row['items'] = mcd_get_order_items($conn, $row['Order_Id']);
         $orders[] = $row;
     }
 
-    mysqli_stmt_close($stmt);
+    usort($orders, function ($a, $b) {
+        $aTime = isset($a['Order_OrderDate']) ? (is_string($a['Order_OrderDate']) ? strtotime($a['Order_OrderDate']) : $a['Order_OrderDate']->get()->format('U')) : 0;
+        $bTime = isset($b['Order_OrderDate']) ? (is_string($b['Order_OrderDate']) ? strtotime($b['Order_OrderDate']) : $b['Order_OrderDate']->get()->format('U')) : 0;
+        return $bTime - $aTime;
+    });
 
     return $orders;
 }
 
-function mcd_accept_order($conn, $orderId, $prepTime) {
-    $stmt = mysqli_prepare($conn, "UPDATE mcorder SET Order_Status = 'Preparing', Order_PrepTime = ? WHERE Order_Id = ? AND Order_Status = 'Pending'");
+function mcd_accept_order($connIgnored, $orderId, $prepTime) {
+    global $firestore;
+    $db = $firestore->database();
+    $docRef = $db->collection('orders')->document((string) $orderId);
 
-    if (!$stmt) {
+    $doc = $docRef->snapshot();
+    if (!$doc->exists() || ($doc->data()['Order_Status'] ?? '') !== 'Pending') {
         return false;
     }
 
-    mysqli_stmt_bind_param($stmt, "ii", $prepTime, $orderId);
-    $success = mysqli_stmt_execute($stmt);
-    $affected = mysqli_stmt_affected_rows($stmt);
-    mysqli_stmt_close($stmt);
+    $now = new \Google\Cloud\Core\Timestamp(new \DateTime());
 
-    if ($success && $affected > 0) {
-        $dlvryStmt = mysqli_prepare($conn, "INSERT INTO mcdeliverystatus (Dlvry_Order_Id, Dlvry_StatusUpdate) VALUES (?, 'Preparing')");
-        mysqli_stmt_bind_param($dlvryStmt, "i", $orderId);
-        mysqli_stmt_execute($dlvryStmt);
-        mysqli_stmt_close($dlvryStmt);
+    $docRef->update([
+        ['path' => 'Order_Status', 'value' => 'Preparing'],
+        ['path' => 'Order_PrepTime', 'value' => $prepTime],
+    ]);
 
-        return true;
-    }
+    // Add status to deliveryStatus array
+    $docRef->update([
+        ['path' => 'deliveryStatus', 'value' => array_merge(
+            $doc->data()['deliveryStatus'] ?? [],
+            [['Dlvry_StatusUpdate' => 'Preparing', 'Dlvry_DateTime' => $now]]
+        )],
+    ]);
 
-    return false;
+    return true;
 }
 
-function mcd_update_order_status($conn, $orderId, $newStatus) {
-    $stmt = mysqli_prepare($conn, "UPDATE mcorder SET Order_Status = ? WHERE Order_Id = ?");
+function mcd_update_order_status($connIgnored, $orderId, $newStatus) {
+    global $firestore;
+    $db = $firestore->database();
+    $docRef = $db->collection('orders')->document((string) $orderId);
 
-    if (!$stmt) {
+    $doc = $docRef->snapshot();
+    if (!$doc->exists()) {
         return false;
     }
 
-    mysqli_stmt_bind_param($stmt, "si", $newStatus, $orderId);
-    $success = mysqli_stmt_execute($stmt);
-    mysqli_stmt_close($stmt);
+    $now = new \Google\Cloud\Core\Timestamp(new \DateTime());
+    $data = $doc->data();
 
-    if ($success) {
-        $dlvryStmt = mysqli_prepare($conn, "INSERT INTO mcdeliverystatus (Dlvry_Order_Id, Dlvry_StatusUpdate) VALUES (?, ?)");
-        mysqli_stmt_bind_param($dlvryStmt, "is", $orderId, $newStatus);
-        mysqli_stmt_execute($dlvryStmt);
-        mysqli_stmt_close($dlvryStmt);
+    $docRef->update([
+        ['path' => 'Order_Status', 'value' => $newStatus],
+    ]);
 
-        if ($newStatus === 'Completed') {
-            $payStmt = mysqli_prepare($conn, "UPDATE payment SET Pay_PaymentStatus = 'Done' WHERE Pay_Order_Id = ? AND Pay_PaymentType = 'Cash on Delivery'");
-            mysqli_stmt_bind_param($payStmt, "i", $orderId);
-            mysqli_stmt_execute($payStmt);
-            mysqli_stmt_close($payStmt);
+    // Add to deliveryStatus array
+    $deliveryStatus = $data['deliveryStatus'] ?? [];
+    $deliveryStatus[] = ['Dlvry_StatusUpdate' => $newStatus, 'Dlvry_DateTime' => $now];
+    $docRef->update([
+        ['path' => 'deliveryStatus', 'value' => $deliveryStatus],
+    ]);
+
+    // If completed, update payment status for COD
+    if ($newStatus === 'Completed') {
+        $payment = $data['payment'] ?? [];
+        if (($payment['Pay_PaymentType'] ?? '') === 'Cash on Delivery') {
+            $payment['Pay_PaymentStatus'] = 'Done';
+            $docRef->update([
+                ['path' => 'payment', 'value' => $payment],
+            ]);
+        }
+    }
+
+    return true;
+}
+
+function mcd_get_customer_orders($connIgnored, $custId) {
+    global $firestore;
+    $db = $firestore->database();
+    $orders = [];
+
+    $snapshot = $db->collection('orders')
+        ->where('Order_Cust_Id', '=', $custId)
+        ->documents();
+
+    foreach ($snapshot as $doc) {
+        if (!$doc->exists()) continue;
+        $row = $doc->data();
+        $row['Order_Id'] = $doc->id();
+
+        // Extract LatestStatus from embedded deliveryStatus array
+        $deliveryStatus = $row['deliveryStatus'] ?? [];
+        $latestStatus = '';
+        if (!empty($deliveryStatus)) {
+            $last = end($deliveryStatus);
+            $latestStatus = $last['Dlvry_StatusUpdate'] ?? '';
+        }
+        $row['LatestStatus'] = $latestStatus;
+
+        // Build items array from embedded items
+        $embeddedItems = $row['items'] ?? [];
+        $row['items'] = [];
+        foreach ($embeddedItems as $idx => $item) {
+            $row['items'][] = [
+                'OrderItem_Id' => $doc->id() . '_item_' . $idx,
+                'OrderItem_Order_Id' => $doc->id(),
+                'OrderItem_MenuItemId' => $item['OrderItem_MenuItemId'] ?? '',
+                'Menu_Name' => $item['Menu_Name'] ?? '',
+                'Menu_ImageURL' => $item['Menu_ImageURL'] ?? '',
+                'OrderItem_Quantity' => $item['OrderItem_Quantity'] ?? 0,
+                'OrderItem_Price' => $item['OrderItem_Price'] ?? 0,
+                'OrderItem_Total' => $item['OrderItem_Total'] ?? 0,
+            ];
         }
 
-        return true;
-    }
-
-    return false;
-}
-
-function mcd_get_customer_orders($conn, $custId) {
-    $orders = [];
-    $stmt = mysqli_prepare($conn, "SELECT o.*, b.Brnch_Name, b.Brnch_Street, b.Brnch_Barangay, b.Brnch_City, b.Brnch_Municipality, b.Brnch_PostalCode, (SELECT Dlvry_StatusUpdate FROM mcdeliverystatus WHERE Dlvry_Order_Id = o.Order_Id ORDER BY Dlvry_DateTime DESC LIMIT 1) AS LatestStatus FROM mcorder o LEFT JOIN mcbranch b ON b.Brnch_Id = o.Order_Brnch_Id WHERE o.Order_Cust_Id = ? ORDER BY o.Order_OrderDate DESC");
-
-    if (!$stmt) {
-        return $orders;
-    }
-
-    mysqli_stmt_bind_param($stmt, "i", $custId);
-    mysqli_stmt_execute($stmt);
-    $result = mysqli_stmt_get_result($stmt);
-
-    while ($row = mysqli_fetch_assoc($result)) {
-        $row['items'] = mcd_get_order_items($conn, $row['Order_Id']);
         $orders[] = $row;
     }
 
-    mysqli_stmt_close($stmt);
+    usort($orders, function ($a, $b) {
+        $aTime = isset($a['Order_OrderDate']) ? (is_string($a['Order_OrderDate']) ? strtotime($a['Order_OrderDate']) : $a['Order_OrderDate']->get()->format('U')) : 0;
+        $bTime = isset($b['Order_OrderDate']) ? (is_string($b['Order_OrderDate']) ? strtotime($b['Order_OrderDate']) : $b['Order_OrderDate']->get()->format('U')) : 0;
+        return $bTime - $aTime;
+    });
 
     return $orders;
 }

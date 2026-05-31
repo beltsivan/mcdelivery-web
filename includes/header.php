@@ -9,7 +9,7 @@ require_once(__DIR__ . '/cart.php');
 $bagCount = 0;
 
 if (isset($_SESSION['Cust_Id'])) {
-    $bagCount = mcd_get_customer_bag_count($conn, (int) $_SESSION['Cust_Id']);
+    $bagCount = mcd_get_customer_bag_count(null, $_SESSION['Cust_Id']);
 } else {
     $bagCount = mcd_get_guest_bag_count();
 }
@@ -30,7 +30,9 @@ if (isset($_SESSION['Cust_Id'])) {
     <link rel="stylesheet" href="css/account.css">
     <link rel="stylesheet" href="css/profile.css">
     <link rel="stylesheet" href="css/address.css">
+    <link rel="stylesheet" href="css/responsive.css?v=<?php echo filemtime(__DIR__ . '/../css/responsive.css'); ?>">
     <link href="https://fonts.googleapis.com/css2?family=Speedee:wght@400;700&display=swap" rel="stylesheet">
+    <script src="js/responsive.js" defer></script>
     <script src="js/auth-modal.js" defer></script>
     <script src="js/register.js" defer></script>
     <script src="js/login.js" defer></script>
@@ -41,13 +43,17 @@ if (isset($_SESSION['Cust_Id'])) {
         <a href="index.php">
             <div class="logo">
                 <img src="images/mcLogo.jpg" alt="McDonalds">
-                <span>McDelivery</span>
+                <span>McDelivery Imitation For School Project Purposes</span>
             </div>
         </a>
 
+        <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">
+            <img src="images/menu.png" alt="Menu">
+        </button>
+
         <div class="search-bar">
             <form action="menu.php" method="GET" style="display:flex;width:100%;">
-                <input type="text" name="search" placeholder="Search for your McDonald's favorite" value="<?php echo isset($_GET['search']) ? htmlspecialchars($_GET['search']) : ''; ?>" style="flex:1;">
+                <input type="text" name="search" placeholder="Search for your McDonald's favorite" value="<?php echo isset($_GET['search']) ? htmlspecialchars($_GET['search']) : ''; ?>">
                 
             </form>
         </div>

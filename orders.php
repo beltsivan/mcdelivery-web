@@ -3,34 +3,45 @@ include('config/db.php');
 include('includes/header.php');
 
 if (!isset($_SESSION['Cust_Id'])) {
-    echo '<main class="main-container" style="padding:60px 0;text-align:center;"><h1>Please log in to view your orders.</h1><a href="index.php" style="display:inline-block;background:#FFBC0D;padding:14px 36px;border-radius:30px;font-weight:bold;text-decoration:none;color:#292929;margin-top:16px;">Go Home</a></main>';
+    echo '<main class="main-container" style="padding:60px 0;text-align:center;"><h1>McDonalds Philippine</h1>
+    <h1>Hungry for your favorites?</h1><h1>Log in to view your order history</h1><h1>&</h1>
+    <h1>track current deliveries.</h1><a href="index.php" style="display:inline-block;background:#FFBC0D;padding:14px 36px;border-radius:30px;font-weight:bold;text-decoration:none;color:#292929;margin-top:16px;">Go Home</a></main>';
     include('includes/footer.php');
     exit;
 }
 
 require_once('includes/cart.php');
 
-$custId = (int) $_SESSION['Cust_Id'];
-$orders = mcd_get_customer_orders($conn, $custId);
+$custId = $_SESSION['Cust_Id'];
+$orders = mcd_get_customer_orders(null, $custId);
 ?>
 <style>
-.orders-page { padding: 40px 0; }
+html, body { height: 100%; }
+body { display: flex; flex-direction: column; }
+.orders-page { padding: 40px 0; flex: 1; }
 .orders-page h1 { margin: 0 0 8px; color: #292929; }
 .orders-page .subtitle { color: #777; margin-bottom: 32px; }
-.order-card { background: #fff; border-radius: 16px; padding: 24px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.06); border-left: 5px solid #FFBC0D; }
+.order-card { background: #fff; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.06); border-left: 5px solid #FFBC0D; overflow: hidden; }
 .order-card.preparing { border-left-color: #007bff; }
 .order-card.ready { border-left-color: #28a745; }
 .order-card.completed { border-left-color: #6c757d; }
 .order-card.cancelled { border-left-color: #dc3545; }
-.order-card-header { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px; }
+.order-card-header { display: flex; justify-content: space-between; align-items: center; padding: 18px 24px; cursor: pointer; transition: background 0.2s; user-select: none; }
+.order-card-header:hover { background: #f9f9f9; }
 .order-card-header h3 { margin: 0; font-size: 17px; color: #292929; }
+.order-card-header .header-left { display: flex; align-items: center; gap: 14px; flex: 1; min-width: 0; }
+.order-card-header .header-right { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.order-card-header .toggle-icon { font-size: 14px; color: #999; transition: transform 0.25s; }
+.order-card-header.open .toggle-icon { transform: rotate(180deg); }
 .order-date { color: #888; font-size: 13px; }
 .ord-status { display: inline-block; padding: 4px 14px; border-radius: 20px; font-size: 12px; font-weight: bold; }
 .ord-status.Pending { background: #fff3cd; color: #856404; }
 .ord-status.Preparing { background: #cce5ff; color: #004085; }
 .ord-status.Ready { background: #d4edda; color: #155724; }
 .ord-status.Completed { background: #e2e3e5; color: #383d41; }
-.ord-items { margin-top: 14px; border-top: 1px solid #f0f0f0; padding-top: 12px; }
+.ord-body { display: none; padding: 0 24px 24px; }
+.ord-body.open { display: block; }
+.ord-items { border-top: 1px solid #f0f0f0; padding-top: 12px; }
 .ord-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; font-size: 14px; }
 .ord-item-img { width: 40px; height: 40px; object-fit: contain; border-radius: 6px; margin-right: 12px; background: #f8f8f8; }
 .ord-item-left { display: flex; align-items: center; }
@@ -63,89 +74,99 @@ $orders = mcd_get_customer_orders($conn, $custId);
 
     <?php foreach ($orders as $order): ?>
         <div class="order-card <?php echo strtolower($order['Order_Status']); ?>">
-            <div class="order-card-header">
-                <div>
-                    <h3>Order #<?php echo $order['Order_Id']; ?></h3>
-                    <div class="order-date"><?php echo date('F d, Y - h:i A', strtotime($order['Order_OrderDate'])); ?></div>
+            <div class="order-card-header" onclick="toggleOrder(this)">
+                <div class="header-left">
+                    <span class="toggle-icon">&#9660;</span>
+                    <div>
+                        <h3>Order #<?php echo $order['Order_Id']; ?></h3>
+                        <div class="order-date"><?php echo date('F d, Y - h:i A', strtotime($order['Order_OrderDate'])); ?></div>
+                    </div>
                 </div>
-                <div style="text-align:right;">
+                <div class="header-right">
                     <span class="ord-status <?php echo $order['Order_Status']; ?>"><?php echo htmlspecialchars($order['Order_Status']); ?></span>
                     <?php if (!empty($order['Order_PrepTime']) && $order['Order_Status'] === 'Preparing'): ?>
-                        <div class="prep-info">&#9200; Est. <?php echo (int) $order['Order_PrepTime']; ?> min preparation</div>
+                        <div class="prep-info">&#9200; Est. <?php echo (int) $order['Order_PrepTime']; ?> min</div>
                     <?php endif; ?>
                 </div>
             </div>
 
-            <?php if (!empty($order['Brnch_Name'])): ?>
-                <div style="font-size:13px;color:#666;margin-top:10px;padding:8px 12px;background:#fff8e1;border-radius:8px;display:inline-block;">
-                    &#127963; <?php echo htmlspecialchars($order['Brnch_Name']); ?>
-                    <?php
-                    $bAddr = [];
-                    if (!empty($order['Brnch_Street'])) $bAddr[] = $order['Brnch_Street'];
-                    if (!empty($order['Brnch_City'])) $bAddr[] = $order['Brnch_City'];
-                    if ($bAddr) echo ' - ' . htmlspecialchars(implode(', ', $bAddr));
-                    ?>
-                </div>
-            <?php endif; ?>
-
-            <div class="ord-items">
-                <?php foreach ($order['items'] as $item): ?>
-                    <div class="ord-item">
-                        <div class="ord-item-left">
-                            <img class="ord-item-img" src="<?php echo mcd_normalize_image_path($item['Menu_ImageURL']); ?>" alt="">
-                            <div>
-                                <div class="ord-item-name"><?php echo htmlspecialchars($item['Menu_Name']); ?></div>
-                                <div class="ord-item-qty">Qty: <?php echo (int) $item['OrderItem_Quantity']; ?></div>
-                            </div>
-                        </div>
-                        <span>₱<?php echo number_format($item['OrderItem_Total'], 2); ?></span>
+            <div class="ord-body">
+                <?php if (!empty($order['Brnch_Name'])): ?>
+                    <div style="font-size:13px;color:#666;margin-bottom:14px;padding:8px 12px;background:#fff8e1;border-radius:8px;display:inline-block;">
+                        &#127963; <?php echo htmlspecialchars($order['Brnch_Name']); ?>
+                        <?php
+                        $bAddr = [];
+                        if (!empty($order['Brnch_Street'])) $bAddr[] = $order['Brnch_Street'];
+                        if (!empty($order['Brnch_City'])) $bAddr[] = $order['Brnch_City'];
+                        if ($bAddr) echo ' - ' . htmlspecialchars(implode(', ', $bAddr));
+                        ?>
                     </div>
-                <?php endforeach; ?>
-            </div>
+                <?php endif; ?>
 
-            <div class="ord-total-row">
-                <span>Total</span>
-                <span>₱<?php echo number_format($order['Order_TotalAmount'], 2); ?></span>
-            </div>
-
-            <?php
-            $paymentInfo = mcd_get_payment_info($conn, $order['Order_Id']);
-            ?>
-            <?php if ($paymentInfo): ?>
-                <div class="ord-payment-info">
-                    <span>Payment: <strong><?php echo htmlspecialchars($paymentInfo['Pay_PaymentType']); ?></strong></span>
-                    <span class="pay-status <?php echo strtolower($paymentInfo['Pay_PaymentStatus']); ?>">
-                        <?php echo htmlspecialchars($paymentInfo['Pay_PaymentStatus']); ?>
-                    </span>
-                </div>
-            <?php endif; ?>
-
-            <?php
-            $statusStmt = mysqli_prepare($conn, "SELECT Dlvry_StatusUpdate, Dlvry_DateTime FROM mcdeliverystatus WHERE Dlvry_Order_Id = ? ORDER BY Dlvry_DateTime ASC");
-            $timelineItems = [];
-            if ($statusStmt) {
-                mysqli_stmt_bind_param($statusStmt, "i", $order['Order_Id']);
-                mysqli_stmt_execute($statusStmt);
-                $statusResult = mysqli_stmt_get_result($statusStmt);
-                while ($ts = mysqli_fetch_assoc($statusResult)) {
-                    $timelineItems[] = $ts;
-                }
-                mysqli_stmt_close($statusStmt);
-            }
-            ?>
-            <?php if (!empty($timelineItems)): ?>
-                <div class="ord-timeline">
-                    <h4>Status Timeline</h4>
-                    <?php foreach ($timelineItems as $tl): ?>
-                        <div class="timeline-item">
-                            <span><?php echo htmlspecialchars($tl['Dlvry_StatusUpdate']); ?></span>
-                            <span><?php echo date('h:i A - M d', strtotime($tl['Dlvry_DateTime'])); ?></span>
+                <div class="ord-items">
+                    <?php foreach ($order['items'] as $item): ?>
+                        <div class="ord-item">
+                            <div class="ord-item-left">
+                                <img class="ord-item-img" src="<?php echo mcd_normalize_image_path($item['Menu_ImageURL']); ?>" alt="">
+                                <div>
+                                    <div class="ord-item-name"><?php echo htmlspecialchars($item['Menu_Name']); ?></div>
+                                    <div class="ord-item-qty">Qty: <?php echo (int) $item['OrderItem_Quantity']; ?></div>
+                                </div>
+                            </div>
+                            <span>₱<?php echo number_format($item['OrderItem_Total'], 2); ?></span>
                         </div>
                     <?php endforeach; ?>
                 </div>
-            <?php endif; ?>
+
+                <div class="ord-total-row" style="padding:6px 0 0;margin-top:6px;border-top:none;font-weight:normal;color:#666;">
+                    <span>Subtotal</span>
+                    <span>₱<?php echo number_format($order['Order_TotalAmount'] - $order['Order_DeliveryFee'], 2); ?></span>
+                </div>
+                <div class="ord-total-row" style="padding:4px 0;border-top:none;font-weight:normal;color:#666;">
+                    <span>Delivery Fee</span>
+                    <span>₱<?php echo number_format($order['Order_DeliveryFee'], 2); ?></span>
+                </div>
+                <div class="ord-total-row">
+                    <span>Total</span>
+                    <span>₱<?php echo number_format($order['Order_TotalAmount'], 2); ?></span>
+                </div>
+
+                <?php
+                $paymentInfo = mcd_get_payment_info(null, $order['Order_Id']);
+                ?>
+                <?php if ($paymentInfo): ?>
+                    <div class="ord-payment-info">
+                        <span>Payment: <strong><?php echo htmlspecialchars($paymentInfo['Pay_PaymentType']); ?></strong></span>
+                        <span class="pay-status <?php echo strtolower($paymentInfo['Pay_PaymentStatus']); ?>">
+                            <?php echo htmlspecialchars($paymentInfo['Pay_PaymentStatus']); ?>
+                        </span>
+                    </div>
+                <?php endif; ?>
+
+                <?php
+                $timelineItems = $order['deliveryStatus'] ?? [];
+                ?>
+                <?php if (!empty($timelineItems)): ?>
+                    <div class="ord-timeline">
+                        <h4>Status Timeline</h4>
+                        <?php foreach ($timelineItems as $tl): ?>
+                            <div class="timeline-item">
+                                <span><?php echo htmlspecialchars($tl['Dlvry_StatusUpdate'] ?? ''); ?></span>
+                                <span><?php echo isset($tl['Dlvry_DateTime']) ? date('h:i A - M d', strtotime($tl['Dlvry_DateTime'])) : ''; ?></span>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+            </div>
         </div>
     <?php endforeach; ?>
 </main>
 
+<script>
+function toggleOrder(header) {
+    header.classList.toggle('open');
+    var body = header.nextElementSibling;
+    if (body) body.classList.toggle('open');
+}
+</script>
 <?php include('includes/footer.php'); ?>

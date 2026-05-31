@@ -9,13 +9,15 @@ if (!isset($_SESSION['Cust_Id'])) {
 }
 
 $cust_id = $_SESSION['Cust_Id'];
+$user = [];
 
-// Fetch current user data
-$query = "SELECT * FROM Customer WHERE Cust_Id = ?";
-$stmt = $conn->prepare($query);
-$stmt->bind_param("i", $cust_id);
-$stmt->execute();
-$user = $stmt->get_result()->fetch_assoc();
+if ($firebaseInitialized) {
+    $db = $firestore->database();
+    $customerDoc = $db->collection('customers')->document($cust_id)->snapshot();
+    if ($customerDoc->exists()) {
+        $user = $customerDoc->data();
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -86,7 +88,6 @@ $user = $stmt->get_result()->fetch_assoc();
                 <li><a href="profile.php" class="active">My Profile</a></li>
                 <li><a href="address.php">My Addresses</a></li>
                 <li><a href="contact.php">My Contact Numbers</a></li>
-                <li><a href="#">Coupons</a></li>
             </ul>
         </aside>
 
@@ -120,17 +121,17 @@ $user = $stmt->get_result()->fetch_assoc();
                 <form action="update_profile.php" method="POST">
                     <div class="form-group">
                         <label>First Name</label>
-                        <input type="text" name="fname" value="<?php echo $user['Cust_FName']; ?>">
+                        <input type="text" name="fname" value="<?php echo $user['Cust_FName'] ?? ''; ?>">
                     </div>
 
                     <div class="form-group">
                         <label>Last Name</label>
-                        <input type="text" name="lname" value="<?php echo $user['Cust_LName']; ?>">
+                        <input type="text" name="lname" value="<?php echo $user['Cust_LName'] ?? ''; ?>">
                     </div>
 
                     <div class="form-group">
                         <label>Email</label>
-                        <input type="email" value="<?php echo $user['Cust_Email']; ?>" readonly style="color: #aaa;">
+                        <input type="email" value="<?php echo $user['Cust_Email'] ?? ''; ?>" readonly style="color: #aaa;">
                     </div>
 
                     <button type="submit" class="btn-save">Save</button>

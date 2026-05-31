@@ -1,90 +1,91 @@
 <?php
-// Handle add branch (must be before role check - system admin uses these)
-if (isset($_POST['add_branch'])) {
-    $name = trim($_POST['name']);
-    $street = trim($_POST['street']);
-    $barangay = trim($_POST['barangay']);
-    $city = trim($_POST['city']);
-    $municipality = trim($_POST['municipality']);
-    $postal = preg_replace('/[^0-9]/', '', trim($_POST['postal']));
-    $phone = trim($_POST['phone']);
-    $phone_clean = preg_replace('/[^0-9]/', '', $phone);
-    $error = null;
+if ($firebaseInitialized) {
+    $db = $firestore->database();
 
-    if (strlen($phone_clean) > 0 && strlen($phone_clean) !== 11) {
-        $error = 'Phone number must be exactly 11 digits.';
-    }
+    // Handle add branch
+    if (isset($_POST['add_branch'])) {
+        $name = trim($_POST['name']);
+        $street = trim($_POST['street']);
+        $barangay = trim($_POST['barangay']);
+        $city = trim($_POST['city']);
+        $municipality = trim($_POST['municipality']);
+        $postal = preg_replace('/[^0-9]/', '', trim($_POST['postal']));
+        $phone = trim($_POST['phone']);
+        $phone_clean = preg_replace('/[^0-9]/', '', $phone);
+        $error = null;
 
-    if ($name && $city && !$error) {
-        $stmt = mysqli_prepare($conn, "INSERT INTO mcbranch (Brnch_Name, Brnch_Street, Brnch_Barangay, Brnch_City, Brnch_Municipality, Brnch_PostalCode, Brnch_Phone) VALUES (?, ?, ?, ?, ?, ?, ?)");
-        $phone_val = strlen($phone_clean) ? $phone_clean : null;
-        mysqli_stmt_bind_param($stmt, "sssssss", $name, $street, $barangay, $city, $municipality, $postal, $phone_val);
-        if (mysqli_stmt_execute($stmt)) {
+        if (strlen($phone_clean) > 0 && strlen($phone_clean) !== 11) {
+            $error = 'Phone number must be exactly 11 digits.';
+        }
+
+        if ($name && $city && !$error) {
+            $db->collection('branches')->add([
+                'Brnch_Name' => $name,
+                'Brnch_Street' => $street,
+                'Brnch_Barangay' => $barangay,
+                'Brnch_City' => $city,
+                'Brnch_Municipality' => $municipality,
+                'Brnch_PostalCode' => $postal,
+                'Brnch_Phone' => strlen($phone_clean) ? $phone_clean : null,
+            ]);
             echo '<div class="alert-success">Branch added successfully!</div>';
+        } elseif ($name && $city && $error) {
+            echo '<div class="alert-success" style="background:#f8d7da;color:#721c24;">' . $error . '</div>';
         } else {
-            echo '<div class="alert-success" style="background:#f8d7da;color:#721c24;">Error adding branch.</div>';
+            echo '<div class="alert-success" style="background:#f8d7da;color:#721c24;">Branch Name and City are required.</div>';
         }
-        mysqli_stmt_close($stmt);
-    } elseif ($name && $city && $error) {
-        echo '<div class="alert-success" style="background:#f8d7da;color:#721c24;">' . $error . '</div>';
-    } else {
-        echo '<div class="alert-success" style="background:#f8d7da;color:#721c24;">Branch Name and City are required.</div>';
-    }
-}
-
-// Handle edit branch
-if (isset($_POST['edit_branch'])) {
-    $branchId = (int) $_POST['branch_id'];
-    $name = trim($_POST['name']);
-    $street = trim($_POST['street']);
-    $barangay = trim($_POST['barangay']);
-    $city = trim($_POST['city']);
-    $municipality = trim($_POST['municipality']);
-    $postal = preg_replace('/[^0-9]/', '', trim($_POST['postal']));
-    $phone = trim($_POST['phone']);
-    $phone_clean = preg_replace('/[^0-9]/', '', $phone);
-    $error = null;
-
-    if (strlen($phone_clean) > 0 && strlen($phone_clean) !== 11) {
-        $error = 'Phone number must be exactly 11 digits.';
     }
 
-    if ($name && $city && !$error && $branchId) {
-        $stmt = mysqli_prepare($conn, "UPDATE mcbranch SET Brnch_Name = ?, Brnch_Street = ?, Brnch_Barangay = ?, Brnch_City = ?, Brnch_Municipality = ?, Brnch_PostalCode = ?, Brnch_Phone = ? WHERE Brnch_Id = ?");
-        $phone_val = strlen($phone_clean) ? $phone_clean : null;
-        mysqli_stmt_bind_param($stmt, "sssssssi", $name, $street, $barangay, $city, $municipality, $postal, $phone_val, $branchId);
-        if (mysqli_stmt_execute($stmt)) {
+    // Handle edit branch
+    if (isset($_POST['edit_branch'])) {
+        $branchId = $_POST['branch_id'];
+        $name = trim($_POST['name']);
+        $street = trim($_POST['street']);
+        $barangay = trim($_POST['barangay']);
+        $city = trim($_POST['city']);
+        $municipality = trim($_POST['municipality']);
+        $postal = preg_replace('/[^0-9]/', '', trim($_POST['postal']));
+        $phone = trim($_POST['phone']);
+        $phone_clean = preg_replace('/[^0-9]/', '', $phone);
+        $error = null;
+
+        if (strlen($phone_clean) > 0 && strlen($phone_clean) !== 11) {
+            $error = 'Phone number must be exactly 11 digits.';
+        }
+
+        if ($name && $city && !$error && $branchId) {
+            $db->collection('branches')->document($branchId)->set([
+                'Brnch_Name' => $name,
+                'Brnch_Street' => $street,
+                'Brnch_Barangay' => $barangay,
+                'Brnch_City' => $city,
+                'Brnch_Municipality' => $municipality,
+                'Brnch_PostalCode' => $postal,
+                'Brnch_Phone' => strlen($phone_clean) ? $phone_clean : null,
+            ], ['merge' => true]);
             echo '<div class="alert-success">Branch updated successfully!</div>';
+        } elseif ($name && $city && $error) {
+            echo '<div class="alert-success" style="background:#f8d7da;color:#721c24;">' . $error . '</div>';
         } else {
-            echo '<div class="alert-success" style="background:#f8d7da;color:#721c24;">Error updating branch.</div>';
+            echo '<div class="alert-success" style="background:#f8d7da;color:#721c24;">Branch Name and City are required.</div>';
         }
-        mysqli_stmt_close($stmt);
-    } elseif ($name && $city && $error) {
-        echo '<div class="alert-success" style="background:#f8d7da;color:#721c24;">' . $error . '</div>';
-    } else {
-        echo '<div class="alert-success" style="background:#f8d7da;color:#721c24;">Branch Name and City are required.</div>';
     }
-}
 
-// Handle delete branch
-if (isset($_GET['delete_branch_id'])) {
-    $deleteId = (int) $_GET['delete_branch_id'];
-    $check = mysqli_prepare($conn, "SELECT COUNT(*) AS c FROM staff WHERE Staff_Brnch_Id = ?");
-    mysqli_stmt_bind_param($check, "i", $deleteId);
-    mysqli_stmt_execute($check);
-    $result = mysqli_stmt_get_result($check);
-    $row = mysqli_fetch_assoc($result);
-    if ($row['c'] > 0) {
-        echo '<div class="alert-success" style="background:#f8d7da;color:#721c24;">Cannot delete branch: ' . $row['c'] . ' staff member(s) are assigned to it.</div>';
-    } else {
-        $stmt = mysqli_prepare($conn, "DELETE FROM mcbranch WHERE Brnch_Id = ?");
-        mysqli_stmt_bind_param($stmt, "i", $deleteId);
-        if (mysqli_stmt_execute($stmt)) {
+    // Handle delete branch
+    if (isset($_GET['delete_branch_id'])) {
+        $deleteId = $_GET['delete_branch_id'];
+        // Check for staff assigned to branch
+        $staffDocs = $db->collection('staff')->where('Staff_Brnch_Id', '=', $deleteId)->documents();
+        $staffCount = 0;
+        foreach ($staffDocs as $s) { if ($s->exists()) $staffCount++; }
+
+        if ($staffCount > 0) {
+            echo '<div class="alert-success" style="background:#f8d7da;color:#721c24;">Cannot delete branch: ' . $staffCount . ' staff member(s) are assigned to it.</div>';
+        } else {
+            $db->collection('branches')->document($deleteId)->delete();
             echo '<div class="alert-success">Branch deleted successfully!</div>';
         }
-        mysqli_stmt_close($stmt);
     }
-    mysqli_stmt_close($check);
 }
 ?>
 
@@ -94,64 +95,119 @@ if (isset($_GET['delete_branch_id'])) {
         <h3>Add New Staff</h3>
         <hr>
         <?php
-        // Handle add staff
-        if (isset($_POST['add_staff'])) {
-            $fname = trim($_POST['fname']);
-            $lname = trim($_POST['lname']);
-            $email = trim($_POST['email']);
-            $phone = trim($_POST['phone']);
-            $phone_clean = preg_replace('/[^0-9]/', '', $phone);
-            if (strlen($phone_clean) === 0) {
-                $phone_clean = null;
-            } elseif (strlen($phone_clean) !== 11) {
-                echo '<div class="alert-success" style="background:#f8d7da;color:#721c24;">Phone number must be exactly 11 digits.</div>';
-                $phone_clean = null;
-            }
-            $password = $_POST['password'];
-            $role = $_POST['role'];
-            $branchId = !empty($_POST['branch_id']) ? (int) $_POST['branch_id'] : null;
+        if ($firebaseInitialized) {
+            // Handle add staff
+            if (isset($_POST['add_staff'])) {
+                $fname = trim($_POST['fname']);
+                $lname = trim($_POST['lname']);
+                $email = trim($_POST['email']);
+                $phone = trim($_POST['phone']);
+                $phone_clean = preg_replace('/[^0-9]/', '', $phone);
+                if (strlen($phone_clean) === 0) {
+                    $phone_clean = null;
+                } elseif (strlen($phone_clean) !== 11) {
+                    echo '<div class="alert-success" style="background:#f8d7da;color:#721c24;">Phone number must be exactly 11 digits.</div>';
+                    $phone_clean = null;
+                }
+                $password = $_POST['password'];
+                $role = $_POST['role'];
+                $branchId = !empty($_POST['branch_id']) ? $_POST['branch_id'] : null;
 
-            if ($fname && $email && $password) {
-                $checkStmt = mysqli_prepare($conn, "SELECT Staff_Id FROM staff WHERE Staff_Email = ? LIMIT 1");
-                mysqli_stmt_bind_param($checkStmt, "s", $email);
-                mysqli_stmt_execute($checkStmt);
-                mysqli_stmt_store_result($checkStmt);
+                if ($fname && $email && $password) {
+                    try {
+                        // Check if email already exists
+                        try {
+                            $auth->getUserByEmail($email);
+                            echo '<div class="alert-success" style="background:#f8d7da;color:#721c24;">Email already exists.</div>';
+                        } catch (\Kreait\Firebase\Exception\Auth\UserNotFound $e) {
+                            // Create Firebase Auth user
+                            $user = $auth->createUserWithEmailAndPassword($email, $password);
+                            $uid = $user->uid;
 
-                if (mysqli_stmt_num_rows($checkStmt) > 0) {
-                    echo '<div class="alert-success" style="background:#f8d7da;color:#721c24;">Email already exists.</div>';
-                } else {
-                    $stmt = mysqli_prepare($conn, "INSERT INTO staff (Staff_Brnch_Id, Staff_Role, Staff_FName, Staff_LName, Staff_Phone, Staff_Email, Staff_Password) VALUES (?, ?, ?, ?, ?, ?, ?)");
-                    mysqli_stmt_bind_param($stmt, "issssss", $branchId, $role, $fname, $lname, $phone_clean, $email, $password);
-                    if (mysqli_stmt_execute($stmt)) {
-                        echo '<div class="alert-success">Staff added successfully!</div>';
-                    } else {
+                            // Create staff doc
+                            $db->collection('staff')->document($uid)->set([
+                                'Staff_Brnch_Id' => $branchId,
+                                'Staff_Role' => $role,
+                                'Staff_FName' => $fname,
+                                'Staff_LName' => $lname,
+                                'Staff_Phone' => $phone_clean,
+                                'Staff_Email' => $email,
+                            ]);
+                            echo '<div class="alert-success">Staff added successfully!</div>';
+                        }
+                    } catch (\Exception $e) {
                         echo '<div class="alert-success" style="background:#f8d7da;color:#721c24;">Error adding staff.</div>';
                     }
-                    mysqli_stmt_close($stmt);
+                } else {
+                    echo '<div class="alert-success" style="background:#f8d7da;color:#721c24;">First Name, Email, and Password are required.</div>';
                 }
-                mysqli_stmt_close($checkStmt);
-            } else {
-                echo '<div class="alert-success" style="background:#f8d7da;color:#721c24;">First Name, Email, and Password are required.</div>';
+            }
+
+            // Handle edit staff
+            if (isset($_POST['edit_staff'])) {
+                $uid = $_POST['uid'];
+                $fname = trim($_POST['fname']);
+                $lname = trim($_POST['lname']);
+                $email = trim($_POST['email']);
+                $phone = trim($_POST['phone']);
+                $phone_clean = preg_replace('/[^0-9]/', '', $phone);
+                $password = $_POST['password'];
+                $role = $_POST['role'];
+                $branchId = !empty($_POST['branch_id']) ? $_POST['branch_id'] : null;
+
+                if ($fname && $email && $role) {
+                    try {
+                        $authProps = ['email' => $email];
+                        if (!empty($password)) {
+                            $authProps['password'] = $password;
+                        }
+                        $auth->updateUser($uid, $authProps);
+
+                        $updateData = [
+                            'Staff_FName' => $fname,
+                            'Staff_LName' => $lname,
+                            'Staff_Email' => $email,
+                            'Staff_Role' => $role,
+                            'Staff_Brnch_Id' => $branchId,
+                        ];
+                        if (strlen($phone_clean) === 11) {
+                            $updateData['Staff_Phone'] = $phone_clean;
+                        }
+
+                        $db->collection('staff')->document($uid)->set($updateData, ['merge' => true]);
+                        echo '<div class="alert-success">Staff updated successfully!</div>';
+                    } catch (\Exception $e) {
+                        echo '<div class="alert-success" style="background:#f8d7da;color:#721c24;">Error updating staff.</div>';
+                    }
+                } else {
+                    echo '<div class="alert-success" style="background:#f8d7da;color:#721c24;">First Name, Email, and Role are required.</div>';
+                }
+            }
+
+            // Handle delete staff
+            if (isset($_GET['delete_staff_id'])) {
+                $deleteId = $_GET['delete_staff_id'];
+                try {
+                    // Delete from Firebase Auth
+                    $auth->deleteUser($deleteId);
+                    // Delete from Firestore
+                    $db->collection('staff')->document($deleteId)->delete();
+                    echo '<div class="alert-success">Staff deleted successfully!</div>';
+                } catch (\Exception $e) {
+                    echo '<div class="alert-success" style="background:#f8d7da;color:#721c24;">Error deleting staff.</div>';
+                }
             }
         }
 
-        // Handle delete staff
-        if (isset($_GET['delete_staff_id'])) {
-            $deleteId = (int) $_GET['delete_staff_id'];
-            if ($staffRole === 'Manager' && isset($_SESSION['Staff_Brnch_Id'])) {
-                $stmt = mysqli_prepare($conn, "DELETE FROM staff WHERE Staff_Id = ? AND Staff_Brnch_Id = ?");
-                mysqli_stmt_bind_param($stmt, "ii", $deleteId, $_SESSION['Staff_Brnch_Id']);
-            } else {
-                $stmt = mysqli_prepare($conn, "DELETE FROM staff WHERE Staff_Id = ?");
-                mysqli_stmt_bind_param($stmt, "i", $deleteId);
+        $branchDocs = $db->collection('branches')->orderBy('Brnch_Name')->documents();
+        $branches = [];
+        foreach ($branchDocs as $doc) {
+            if ($doc->exists()) {
+                $b = $doc->data();
+                $b['Brnch_Id'] = $doc->id();
+                $branches[] = $b;
             }
-            if (mysqli_stmt_execute($stmt)) {
-                echo '<div class="alert-success">Staff deleted successfully!</div>';
-            }
-            mysqli_stmt_close($stmt);
         }
-
-        $branches = mysqli_query($conn, "SELECT * FROM mcbranch ORDER BY Brnch_Name ASC, Brnch_City ASC");
         ?>
         <form method="POST">
             <div style="display: flex; gap: 12px;">
@@ -167,15 +223,15 @@ if (isset($_GET['delete_branch_id'])) {
                 <option value="Rider">Rider</option>
             </select>
             <?php if ($staffRole === 'Manager' && isset($_SESSION['Staff_Brnch_Id'])): ?>
-                <input type="hidden" name="branch_id" value="<?php echo (int) $_SESSION['Staff_Brnch_Id']; ?>">
+                <input type="hidden" name="branch_id" value="<?php echo $_SESSION['Staff_Brnch_Id']; ?>">
             <?php else: ?>
             <select name="branch_id">
                 <option value="">-- No Branch --</option>
-                <?php while ($branch = mysqli_fetch_assoc($branches)): ?>
+                <?php foreach ($branches as $branch): ?>
                     <option value="<?php echo $branch['Brnch_Id']; ?>">
                         <?php echo htmlspecialchars(($branch['Brnch_Name'] ? $branch['Brnch_Name'] . ' - ' : '') . $branch['Brnch_City'] . ' - ' . $branch['Brnch_Street']); ?>
                     </option>
-                <?php endwhile; ?>
+                <?php endforeach; ?>
             </select>
             <?php endif; ?>
             <button type="submit" name="add_staff" class="btn-admin">Add Staff</button>
@@ -187,13 +243,28 @@ if (isset($_GET['delete_branch_id'])) {
         <input type="text" id="staffSearch" onkeyup="filterStaff()" placeholder="Search staff..." style="width:100%;padding:10px;margin-bottom:12px;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;">
         <hr>
         <?php
-        $staffBranchFilter = ($staffRole === 'Manager' && isset($_SESSION['Staff_Brnch_Id'])) ? (int) $_SESSION['Staff_Brnch_Id'] : null;
-        $staffSql = "SELECT s.*, b.Brnch_Name, b.Brnch_City FROM staff s LEFT JOIN mcbranch b ON b.Brnch_Id = s.Staff_Brnch_Id";
+        $staffBranchFilter = ($staffRole === 'Manager' && isset($_SESSION['Staff_Brnch_Id'])) ? $_SESSION['Staff_Brnch_Id'] : null;
+        $staffQuery = $db->collection('staff');
         if ($staffBranchFilter) {
-            $staffSql .= " WHERE s.Staff_Brnch_Id = $staffBranchFilter";
+            $staffQuery = $staffQuery->where('Staff_Brnch_Id', '=', $staffBranchFilter);
         }
-        $staffSql .= " ORDER BY s.Staff_Id ASC";
-        $all_staff = mysqli_query($conn, $staffSql);
+        $staffSnapshot = $staffQuery->documents();
+        $all_staff = [];
+        foreach ($staffSnapshot as $sDoc) {
+            if (!$sDoc->exists()) continue;
+            $s = $sDoc->data();
+            $s['Staff_Id'] = $sDoc->id();
+            // Denormalize branch name
+            if (!empty($s['Staff_Brnch_Id'])) {
+                $bDoc = $db->collection('branches')->document($s['Staff_Brnch_Id'])->snapshot();
+                if ($bDoc->exists()) {
+                    $bData = $bDoc->data();
+                    $s['Brnch_Name'] = $bData['Brnch_Name'] ?? '';
+                    $s['Brnch_City'] = $bData['Brnch_City'] ?? '';
+                }
+            }
+            $all_staff[] = $s;
+        }
         ?>
         <table class="menu-table">
             <thead>
@@ -207,22 +278,49 @@ if (isset($_GET['delete_branch_id'])) {
                 </tr>
             </thead>
             <tbody>
-                <?php while ($staff = mysqli_fetch_assoc($all_staff)): ?>
+                <?php foreach ($all_staff as $staff): ?>
                 <tr>
-                    <td><?php echo $staff['Staff_Id']; ?></td>
-                    <td class="item-name"><?php echo htmlspecialchars($staff['Staff_FName'] . ' ' . $staff['Staff_LName']); ?></td>
-                    <td><?php echo htmlspecialchars($staff['Staff_Email']); ?></td>
-                    <td><span class="category-badge"><?php echo htmlspecialchars($staff['Staff_Role']); ?></span></td>
+                    <td><?php echo htmlspecialchars(substr($staff['Staff_Id'], 0, 8)) . '...'; ?></td>
+                    <td class="item-name"><?php echo htmlspecialchars(($staff['Staff_FName'] ?? '') . ' ' . ($staff['Staff_LName'] ?? '')); ?></td>
+                    <td><?php echo htmlspecialchars($staff['Staff_Email'] ?? ''); ?></td>
+                    <td><span class="category-badge"><?php echo htmlspecialchars($staff['Staff_Role'] ?? ''); ?></span></td>
                     <td><?php echo htmlspecialchars(($staff['Brnch_Name'] ?? '') ? $staff['Brnch_Name'] . ' - ' . ($staff['Brnch_City'] ?? '') : ($staff['Brnch_City'] ?? 'N/A')); ?></td>
                     <td class="item-actions">
+                        <a href="javascript:void(0)" onclick='openEditStaffModal(<?php echo json_encode($staff, JSON_HEX_APOS); ?>)' class="btn-edit">Edit</a>
                         <a href="admin_dashboard.php?page=staff&delete_staff_id=<?php echo $staff['Staff_Id']; ?>"
                            onclick="return confirm('Delete this staff member?');"
                            class="btn-delete">Delete</a>
                     </td>
                 </tr>
-                <?php endwhile; ?>
+                <?php endforeach; ?>
             </tbody>
         </table>
+    </div>
+</div>
+
+<!-- Edit Staff Modal -->
+<div id="editStaffModal" class="modal-overlay">
+    <div class="modal-content">
+        <span class="close-btn" onclick="closeEditStaffModal()">&times;</span>
+        <h3>Edit Staff</h3>
+        <hr>
+        <form method="POST">
+            <input type="hidden" name="uid" id="edit_staff_uid" value="">
+            <div style="display: flex; gap: 12px;">
+                <input type="text" name="fname" id="edit_staff_fname" placeholder="First Name" required style="flex:1;">
+                <input type="text" name="lname" id="edit_staff_lname" placeholder="Last Name" style="flex:1;">
+            </div>
+            <input type="email" name="email" id="edit_staff_email" placeholder="Email" required>
+            <input type="text" name="phone" id="edit_staff_phone" placeholder="Phone (e.g. 09123456789)" inputmode="numeric" pattern="[0-9]{11}" maxlength="11">
+            <input type="password" name="password" placeholder="New Password (leave blank to keep current)">
+            <select name="role" id="edit_staff_role" required>
+                <option value="">-- Select Role --</option>
+                <option value="Kitchen Staff">Kitchen Staff</option>
+                <option value="Rider">Rider</option>
+            </select>
+            <input type="hidden" name="branch_id" id="edit_staff_branch" value="">
+            <button type="submit" name="edit_staff" class="btn-admin">Update Staff</button>
+        </form>
     </div>
 </div>
 <?php endif; ?>
@@ -232,7 +330,8 @@ if (isset($_GET['delete_branch_id'])) {
     <div class="card-header">
         <h3>Manage Branches</h3>
         <span class="item-count"><?php
-            $branchCount = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) AS c FROM mcbranch"))['c'];
+            $branchCount = 0;
+            foreach ($db->collection('branches')->documents() as $d) { if ($d->exists()) $branchCount++; }
             echo $branchCount; ?> branches
         </span>
     </div>
@@ -257,11 +356,14 @@ if (isset($_GET['delete_branch_id'])) {
             </thead>
             <tbody>
                 <?php
-                $all_branches = mysqli_query($conn, "SELECT * FROM mcbranch ORDER BY Brnch_Name ASC, Brnch_City ASC");
-                while ($branch = mysqli_fetch_assoc($all_branches)):
+                $braSnapshot = $db->collection('branches')->orderBy('Brnch_Name')->documents();
+                foreach ($braSnapshot as $branchDoc):
+                    if (!$branchDoc->exists()) continue;
+                    $branch = $branchDoc->data();
+                    $branch['Brnch_Id'] = $branchDoc->id();
                 ?>
                 <tr>
-                    <td><?php echo $branch['Brnch_Id']; ?></td>
+                    <td><?php echo htmlspecialchars(substr($branch['Brnch_Id'], 0, 8)) . '...'; ?></td>
                     <td class="item-name"><?php echo htmlspecialchars($branch['Brnch_Name'] ?? ''); ?></td>
                     <td><?php echo htmlspecialchars($branch['Brnch_Street'] ?? ''); ?></td>
                     <td><?php echo htmlspecialchars($branch['Brnch_Barangay'] ?? ''); ?></td>
@@ -276,7 +378,7 @@ if (isset($_GET['delete_branch_id'])) {
                            class="btn-delete">Delete</a>
                     </td>
                 </tr>
-                <?php endwhile; ?>
+                <?php endforeach; ?>
             </tbody>
         </table>
     </div>
@@ -327,10 +429,25 @@ if (isset($_GET['delete_branch_id'])) {
 <?php endif; ?>
 
 <script>
+function openEditStaffModal(staff) {
+    document.getElementById('edit_staff_uid').value = staff.Staff_Id || '';
+    document.getElementById('edit_staff_fname').value = staff.Staff_FName || '';
+    document.getElementById('edit_staff_lname').value = staff.Staff_LName || '';
+    document.getElementById('edit_staff_email').value = staff.Staff_Email || '';
+    document.getElementById('edit_staff_phone').value = staff.Staff_Phone || '';
+    document.getElementById('edit_staff_role').value = staff.Staff_Role || '';
+    document.getElementById('edit_staff_branch').value = staff.Staff_Brnch_Id || '';
+    document.getElementById('editStaffModal').style.display = 'block';
+}
+function closeEditStaffModal() {
+    document.getElementById('editStaffModal').style.display = 'none';
+}
+
 function filterStaff() {
     var input = document.getElementById('staffSearch');
     var filter = input.value.toLowerCase();
     var tbody = document.querySelector('.product-list-container tbody');
+    if (!tbody) return;
     var rows = tbody.getElementsByTagName('tr');
     for (var i = 0; i < rows.length; i++) {
         var cells = rows[i].getElementsByTagName('td');

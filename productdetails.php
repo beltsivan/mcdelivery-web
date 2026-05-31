@@ -9,33 +9,31 @@ include('config/db.php');
 require_once('includes/cart.php');
 
 $product = null;
-$productId = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
+$productId = filter_input(INPUT_GET, 'id');
 
-function findProductById($conn, $productId) {
-    $stmt = mysqli_prepare($conn, "SELECT * FROM McdoMenuItem WHERE Menu_MenuItemId = ? LIMIT 1");
+function findProductById($productId) {
+    global $firestore, $firebaseInitialized;
+    if (!$firebaseInitialized) return null;
 
-    if (!$stmt) {
-        return null;
-    }
+    $db = $firestore->database();
+    $doc = $db->collection('menuItems')->document((string) $productId)->snapshot();
 
-    mysqli_stmt_bind_param($stmt, "i", $productId);
-    mysqli_stmt_execute($stmt);
-    $result = mysqli_stmt_get_result($stmt);
-    $product = mysqli_fetch_assoc($result);
-    mysqli_stmt_close($stmt);
+    if (!$doc->exists()) return null;
 
-    return $product;
+    $data = $doc->data();
+    $data['Menu_MenuItemId'] = $doc->id();
+    return $data;
 }
 
 if ($productId) {
-    $product = findProductById($conn, $productId);
+    $product = findProductById($productId);
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_to_bag']) && $product) {
     unset($_SESSION['bag']);
 
     if (isset($_SESSION['Cust_Id'])) {
-        mcd_add_customer_bag_item($conn, (int) $_SESSION['Cust_Id'], $product);
+        mcd_add_customer_bag_item(null, $_SESSION['Cust_Id'], $product);
     } else {
         $_SESSION['guest_bag_flash'] = [
             'id' => (int) $product['Menu_MenuItemId'],

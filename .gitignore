@@ -1,0 +1,3 @@
+vendor/
+config/firebase-credentials.json
+migration_id_map.json

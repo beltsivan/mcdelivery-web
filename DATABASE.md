@@ -130,3 +130,26 @@ CREATE TABLE Payment (
 ALTER TABLE mcorder ADD COLUMN Order_Brnch_Id INT NULL AFTER Order_Add_Id;
 -- 2. Convert non-system-admin Admin accounts to Manager role
 UPDATE staff SET Staff_Role = 'Manager' WHERE Staff_Email != 'admin@gmail.com' AND Staff_Role = 'Admin';
+
+
+admin:
+admin@gmail.com
+admin123
+
+staff{
+john@gmail.com 
+john123
+
+staff2@gmail.com
+staff123
+}
+
+
+managers:
+manager2@gmail.com
+manager3@gmail.com (jagobiao branch)
+manager123
+
+meloy@gmail.com (consolacion national road branch)
+meloy123
+

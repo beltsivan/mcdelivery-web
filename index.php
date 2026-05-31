@@ -1,26 +1,71 @@
 <?php 
-// 1. Set the timezone first!
 date_default_timezone_set('Asia/Manila');
 include('config/db.php'); 
 include('includes/header.php'); 
 
-// 2. Logic to determine Greeting and Category
-$hour = date('H'); // Gets hour from 00 to 23
+$hour = date('H');
 
 $fname = isset($_SESSION['Cust_FName']) ? $_SESSION['Cust_FName'] : "Guest";
 
 if ($hour >= 5 && $hour < 11) {
     $greeting = "Good Morning, " . $fname . "!";
     $subtext = "Say hooray with these breakfast treats!";
-    $category = "Dinner Specials";
 } else if ($hour >= 11 && $hour < 17) {
     $greeting = "Good Afternoon, " . $fname . "!";
     $subtext = "Enjoy your favorite lunch meals!";
-    $category = "Dinner Specials";
 } else {
     $greeting = "Good Evening, " . $fname . "!";
     $subtext = "Treat yourself with these dinner specials!";
-    $category = "Dinner Specials";
+}
+
+$category = "Dinner Specials";
+$dinnerItems = [];
+$exclusiveItems = [];
+$featuredItems = [];
+
+if ($firebaseInitialized) {
+    $db = $firestore->database();
+    $menuCol = $db->collection('menuItems');
+
+    // Dinner specials (homepage)
+    $dinnerDocs = $menuCol
+        ->where('Menu_Category', '=', $category)
+        ->where('Menu_Available', '=', true)
+        ->documents();
+    foreach ($dinnerDocs as $doc) {
+        if ($doc->exists()) {
+            $data = $doc->data();
+            $data['Menu_MenuItemId'] = $doc->id();
+            $dinnerItems[] = $data;
+        }
+    }
+
+    // Exclusives section
+    $exclusiveDocs = $menuCol
+        ->where('Menu_Category', '=', 'Exclusives')
+        ->where('Menu_Available', '=', true)
+        ->documents();
+    foreach ($exclusiveDocs as $doc) {
+        if ($doc->exists()) {
+            $data = $doc->data();
+            $data['Menu_MenuItemId'] = $doc->id();
+            $exclusiveItems[] = $data;
+        }
+    }
+
+    // Featured section
+    $featuredDocs = $menuCol
+        ->where('Menu_Category', '=', 'Featured')
+        ->where('Menu_Available', '=', true)
+        ->limit(5)
+        ->documents();
+    foreach ($featuredDocs as $doc) {
+        if ($doc->exists()) {
+            $data = $doc->data();
+            $data['Menu_MenuItemId'] = $doc->id();
+            $featuredItems[] = $data;
+        }
+    }
 }
 ?>
 
@@ -42,14 +87,8 @@ if ($hour >= 5 && $hour < 11) {
 
         <div class="product-grid">
         <?php
-        // 3. Fetch ONLY products matching the current time category
-        // Escaping $category for security
-        $safe_category = mysqli_real_escape_string($conn, $category);
-        $query = "SELECT * FROM McdoMenuItem WHERE Menu_Category = 'Dinner Specials' AND Menu_Available = 1";
-        $result = mysqli_query($conn, $query);
-
-        if (mysqli_num_rows($result) > 0) {
-            while($row = mysqli_fetch_assoc($result)) {
+        if (!empty($dinnerItems)) {
+            foreach ($dinnerItems as $row) {
                 ?>
                 <a href="productdetails.php?id=<?php echo $row['Menu_MenuItemId']; ?>">
                     <div class="card">
@@ -138,13 +177,8 @@ if ($hour >= 5 && $hour < 11) {
     
     <div class="product-grid">
     <?php
-    // Querying specifically for 'Exclusives' category
-    $exclusive_query = "SELECT * FROM McdoMenuItem WHERE Menu_Category = 'Exclusives' AND Menu_Available = 1";
-    $exclusive_result = mysqli_query($conn, $exclusive_query);
-
-    if (mysqli_num_rows($exclusive_result) > 0) {
-        while($row = mysqli_fetch_assoc($exclusive_result)) {
-            // Reusing your exact same card structure again!
+    if (!empty($exclusiveItems)) {
+        foreach ($exclusiveItems as $row) {
             ?>
         <a href="productdetails.php?id=<?php echo $row['Menu_MenuItemId']; ?>">
             <div class="card">
@@ -171,33 +205,26 @@ if ($hour >= 5 && $hour < 11) {
     
     <div class="product-grid">
     <?php
-// Added 'LIMIT 4' to the end of the query
-$featured_query = "SELECT * FROM McdoMenuItem 
-                   WHERE Menu_Category = 'Featured' 
-                   AND Menu_Available = 1 
-                   LIMIT 5"; 
-$featured_result = mysqli_query($conn, $featured_query);
-
-if (mysqli_num_rows($featured_result) > 0) {
-    while($row = mysqli_fetch_assoc($featured_result)) {
-        ?>
-        <a href="productdetails.php?id=<?php echo $row['Menu_MenuItemId']; ?>">
-            <div class="card">
-            <div class="card-image">
-                <img src="uploads/<?php echo htmlspecialchars($row['Menu_ImageURL']); ?>" alt="Featured Item">
+    if (!empty($featuredItems)) {
+        foreach ($featuredItems as $row) {
+            ?>
+            <a href="productdetails.php?id=<?php echo $row['Menu_MenuItemId']; ?>">
+                <div class="card">
+                <div class="card-image">
+                    <img src="uploads/<?php echo htmlspecialchars($row['Menu_ImageURL']); ?>" alt="Featured Item">
+                </div>
+                <div class="card-info">
+                    <h3><?php echo $row['Menu_Name']; ?></h3>
+                    <p class="Menu_Price">₱<?php echo number_format($row['Menu_Price'], 2); ?></p>
+                </div>
             </div>
-            <div class="card-info">
-                <h3><?php echo $row['Menu_Name']; ?></h3>
-                <p class="Menu_Price">₱<?php echo number_format($row['Menu_Price'], 2); ?></p>
-            </div>
-        </div>
-        </a>
-        
-        <?php
+            </a>
+            
+            <?php
+        }
     }
-}
-?>
-    </div>
+    ?>
+        </div>
 </div>
 <script src="js/slider.js?v=<?php echo time(); ?>"></script>
 </main>

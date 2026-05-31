@@ -12,32 +12,43 @@ require_once('includes/cart.php');
 require_once('config/db.php');
 include('includes/header.php');
 
-$custId = (int) $_SESSION['Cust_Id'];
+$custId = $_SESSION['Cust_Id'];
+$db = $firestore->database();
 
 // Check if customer selected a branch
 $selectedBranch = null;
 if (isset($_SESSION['Cust_Brnch_Id'])) {
-    $bStmt = mysqli_prepare($conn, "SELECT * FROM mcbranch WHERE Brnch_Id = ?");
-    mysqli_stmt_bind_param($bStmt, "i", $_SESSION['Cust_Brnch_Id']);
-    mysqli_stmt_execute($bStmt);
-    $bResult = mysqli_stmt_get_result($bStmt);
-    $selectedBranch = mysqli_fetch_assoc($bResult);
-    mysqli_stmt_close($bStmt);
+    $branchDoc = $db->collection('branches')->document((string) $_SESSION['Cust_Brnch_Id'])->snapshot();
+    if ($branchDoc->exists()) {
+        $selectedBranch = $branchDoc->data();
+        $selectedBranch['Brnch_Id'] = $branchDoc->id();
+    }
 }
 
 // Check for addresses
-$addrResult = mysqli_query($conn, "SELECT * FROM Address WHERE Add_Cust_Id = $custId");
-$addresses = mysqli_fetch_all($addrResult, MYSQLI_ASSOC);
+$addrSnapshot = $db->collection('addresses')
+    ->where('Add_Cust_Id', '=', $custId)
+    ->documents();
+
+$addresses = [];
+foreach ($addrSnapshot as $addrDoc) {
+    if ($addrDoc->exists()) {
+        $addr = $addrDoc->data();
+        $addr['Add_Id'] = $addrDoc->id();
+        $addresses[] = $addr;
+    }
+}
 
 if (empty($addresses)) {
     header('Location: address.php?required=1');
     exit;
 }
 
-// Process checkout
+    // Process checkout
+$checkoutError = '';
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['address_id'])) {
     $paymentMethod = isset($_POST['payment_method']) ? $_POST['payment_method'] : 'Cash on Delivery';
-    $addressId = (int) $_POST['address_id'];
+    $addressId = $_POST['address_id'];
 
     // Verify address belongs to user
     $valid = false;
@@ -45,17 +56,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['address_id'])) {
         if ($a['Add_Id'] == $addressId) { $valid = true; break; }
     }
     if (!$valid) {
-        echo '<div class="error-banner">Invalid address selected.</div>';
+        $checkoutError = 'Invalid address selected.';
+    } elseif (!isset($_SESSION['Cust_Brnch_Id'])) {
+        $checkoutError = 'Please select a branch before placing an order.';
     } else {
-        $branchId = isset($_SESSION['Cust_Brnch_Id']) ? (int) $_SESSION['Cust_Brnch_Id'] : null;
-        $orderId = mcd_checkout($conn, $custId, $addressId, $paymentMethod, $branchId);
+        $branchId = $_SESSION['Cust_Brnch_Id'];
+        $orderId = mcd_checkout(null, $custId, $addressId, $paymentMethod, $branchId);
 
         if ($orderId) {
             $_SESSION['order_success'] = $orderId;
             header('Location: order_success.php?order_id=' . $orderId);
             exit;
         } else {
-            echo '<div class="error-banner">Checkout failed. Please try again.</div>';
+            $checkoutError = 'Checkout failed. Please try again.';
         }
     }
 }
@@ -65,6 +78,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['address_id'])) {
 <div class="reg-container">
     <h1>Checkout</h1>
     <p>Review your order and select a delivery address.</p>
+    <?php if ($checkoutError): ?>
+        <div class="error-banner"><?php echo htmlspecialchars($checkoutError); ?></div>
+    <?php endif; ?>
 
     <div class="reg-card">
         <form method="POST">
@@ -110,4 +126,3 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['address_id'])) {
 </div>
 </body>
 <?php include('includes/footer.php'); ?>
-

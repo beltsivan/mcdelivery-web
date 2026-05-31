@@ -5,7 +5,7 @@
     justify-content: center !important;
     align-items: stretch;
     width: 100%;
-    max-width: 1030px;
+    max-width: 1200px;
     margin: 0 auto;
 }
 
@@ -184,6 +184,13 @@
     text-decoration: none;
     flex: 0 0 230px;
     width: 230px;
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+    .card-link {
+        flex: 0 0 calc(33.33% - 15px);
+        width: auto;
+    }
 }
 
 .card-link .card {

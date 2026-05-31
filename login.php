@@ -6,22 +6,43 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $email = $_POST['email'];
     $password = $_POST['password'];
 
-    $stmt = $conn->prepare("SELECT * FROM Customer WHERE Cust_Email = ?");
-    $stmt->bind_param("s", $email);
-    $stmt->execute();
-    $result = $stmt->get_result();
+    if (!$firebaseInitialized) {
+        $_SESSION['login_error'] = "Firebase not configured.";
+        $_SESSION['show_login_modal'] = true;
+        header("Location: " . ($_SERVER['HTTP_REFERER'] ?? 'index.php'));
+        exit();
+    }
 
-    if ($user = $result->fetch_assoc()) {
-        if (password_verify($password, $user['Cust_Password'])) {
-            $_SESSION['Cust_Id'] = $user['Cust_Id'];
-            $_SESSION['Cust_FName'] = $user['Cust_FName'];
+    try {
+        $result = $auth->signInWithEmailAndPassword($email, $password);
+        $uid = $result->firebaseUserId();
+
+        // Read customer data from Firestore
+        $db = $firestore->database();
+        $customerDoc = $db->collection('customers')->document($uid)->snapshot();
+
+        if ($customerDoc->exists()) {
+            $customer = $customerDoc->data();
+            $_SESSION['Cust_Id'] = $uid;
+            $_SESSION['Cust_FName'] = $customer['Cust_FName'] ?? '';
             header("Location: branch_select.php");
             exit();
         } else {
-            $_SESSION['login_error'] = "Wrong password.";
+            $_SESSION['login_error'] = "Account not found.";
         }
-    } else {
-        $_SESSION['login_error'] = "No account found with that email.";
+    } catch (\Kreait\Firebase\Auth\SignIn\FailedToSignIn $e) {
+        $errorMsg = $e->getMessage();
+        if (strpos($errorMsg, 'EMAIL_NOT_FOUND') !== false) {
+            $_SESSION['login_error'] = "No account found with that email.";
+        } elseif (strpos($errorMsg, 'INVALID_PASSWORD') !== false) {
+            $_SESSION['login_error'] = "Wrong password.";
+        } elseif (strpos($errorMsg, 'INVALID_LOGIN_CREDENTIALS') !== false) {
+            $_SESSION['login_error'] = "Invalid email or password.";
+        } else {
+            $_SESSION['login_error'] = "Login failed. Please try again.";
+        }
+    } catch (\Exception $e) {
+        $_SESSION['login_error'] = "Login failed. Please try again.";
     }
 
     $_SESSION['show_login_modal'] = true;

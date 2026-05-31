@@ -2,7 +2,7 @@
     <div class="display-products-card">
         <div class="card-header">
             <h3>Current Menu Items</h3>
-            <span class="item-count"><?php echo mysqli_num_rows($all_items); ?> items</span>
+            <span class="item-count"><?php echo count($all_items); ?> items</span>
         </div>
         <div class="search-bar">
             <span class="search-icon">&#128269;</span>
@@ -19,7 +19,7 @@
                 </tr>
             </thead>
             <tbody id="menuTableBody">
-                <?php while($row = mysqli_fetch_assoc($all_items)): ?>
+                <?php foreach ($all_items as $row): ?>
                 <tr class="clickable-row" onclick="openProductModal(<?php echo htmlspecialchars(json_encode($row)); ?>)">
                     <td class="item-name"><?php echo htmlspecialchars($row['Menu_Name']); ?></td>
                     <td>
@@ -35,7 +35,7 @@
    class="btn-delete">Delete</a>
                     </td>
                 </tr>
-                <?php endwhile; ?>
+                <?php endforeach; ?>
             </tbody>
         </table>
         </div>

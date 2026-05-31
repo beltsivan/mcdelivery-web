@@ -1,5 +1,5 @@
 <?php
-include('config/db.php'); 
+include('config/db.php');
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $fname = $_POST['fname'];
@@ -10,31 +10,43 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $confirm_pass = $_POST['confirm_password'];
 
     $phone_clean = preg_replace('/[^0-9]/', '', $phone);
+
     if (strlen($phone_clean) !== 11) {
         $error = "Invalid phone number format. Must be exactly 11 digits.";
     } elseif ($pass !== $confirm_pass) {
         $error = "Passwords do not match!";
+    } elseif (!$firebaseInitialized) {
+        $error = "Firebase not configured.";
     } else {
-        $check = $conn->prepare("SELECT Cust_Id FROM Customer WHERE Cust_Email = ?");
-        $check->bind_param("s", $email);
-        $check->execute();
-        $check->store_result();
-        if ($check->num_rows > 0) {
-            $error = "Email is already used.";
-        } else {
-            $hashed_pass = password_hash($pass, PASSWORD_DEFAULT);
-            $stmt = $conn->prepare("INSERT INTO Customer (Cust_FName, Cust_LName, Cust_Email, Cust_Password, Cust_Phone) VALUES (?, ?, ?, ?, ?)");
-            $stmt->bind_param("sssss", $fname, $lname, $email, $hashed_pass, $phone_clean);
+        try {
+            // Check if email already exists via Firebase Auth
+            try {
+                $existingUser = $auth->getUserByEmail($email);
+                $error = "Email is already used.";
+            } catch (\Kreait\Firebase\Exception\Auth\UserNotFound $e) {
+                // Email not taken, proceed with registration
+                $user = $auth->createUserWithEmailAndPassword($email, $pass);
+                $uid = $user->uid;
 
-            if ($stmt->execute()) {
+                // Store customer data in Firestore
+                $db = $firestore->database();
+                $db->collection('customers')->document($uid)->set([
+                    'Cust_Id' => $uid,
+                    'Cust_FName' => $fname,
+                    'Cust_LName' => $lname,
+                    'Cust_Email' => $email,
+                    'Cust_Phone' => $phone_clean,
+                    'Cust_CreatedAt' => new \Google\Cloud\Core\Timestamp(new \DateTime()),
+                ]);
+
                 session_start();
                 $_SESSION['reg_success'] = true;
                 $_SESSION['show_login_modal'] = true;
                 header("Location: index.php");
                 exit();
-            } else {
-                $error = "An error occurred. Please try again.";
             }
+        } catch (\Exception $e) {
+            $error = "Registration failed. Please try again.";
         }
     }
 }
@@ -71,10 +83,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 </div>
 
                 <div class="full-width">
-                    <div class="checkbox-group">
-                        <input type="checkbox" required>
-                        <span>I would like to receive announcements and promotions from McDonald's.</span>
-                    </div>
                     <div class="checkbox-group">
                         <input type="checkbox" required>
                         <span>I consent to the use and processing of my personal information...</span>

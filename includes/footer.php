@@ -5,14 +5,12 @@ if (session_status() === PHP_SESSION_NONE) {
 
 require_once(__DIR__ . '/cart.php');
 
-if (isset($_SESSION['Cust_Id']) && !isset($conn)) {
+if (!isset($firebaseInitialized)) {
     require_once(__DIR__ . '/../config/db.php');
 }
 
-$bagItems = [];
-
-if (isset($_SESSION['Cust_Id']) && isset($conn)) {
-    $bagItems = mcd_get_customer_bag_items($conn, (int) $_SESSION['Cust_Id']);
+if (isset($_SESSION['Cust_Id'])) {
+    $bagItems = mcd_get_customer_bag_items(null, $_SESSION['Cust_Id']);
 } else {
     $bagItems = mcd_get_guest_bag_items();
     unset($_SESSION['guest_bag_flash']);
@@ -69,21 +67,33 @@ $grandTotal = $bagTotal + $deliveryFee;
         /* The Sidebar */
 .side-bag {
     position: fixed;
-    /* Change this to match your header's height */
-    top: 80px; 
-    
+    top: 80px;
     right: -400px;
     width: 400px;
-    
-    /* Calculate height: 100% of viewport minus the header height */
-    height: calc(100vh - 80px); 
-    
+    height: calc(100vh - 80px);
     background-color: white;
-    z-index: 999; /* Slightly lower than header if header is 1000 */
+    z-index: 999;
     box-shadow: -5px 5px 15px rgba(0,0,0,0.1);
     display: flex;
     flex-direction: column;
     transition: right 0.3s ease-in-out;
+}
+
+@media (max-width: 480px) {
+    .side-bag {
+        width: 100%;
+        right: -100%;
+    }
+    .bag-item {
+        gap: 8px;
+    }
+    .bag-item img {
+        width: 48px;
+        height: 48px;
+    }
+    .item-details p {
+        font-size: 13px;
+    }
 }
 
 /* Slide in state */
@@ -235,19 +245,23 @@ $grandTotal = $bagTotal + $deliveryFee;
                     <div class="item-details">
                         <p><?php echo htmlspecialchars($bagItem['name']); ?></p>
                         <div class="qty-controls">
+                            <?php if (isset($_SESSION['Cust_Id'])): ?>
                             <form method="POST" action="update_cart.php" class="qty-form">
-                                <input type="hidden" name="menu_item_id" value="<?php echo (int) $bagItem['id']; ?>">
+                                <input type="hidden" name="cart_item_id" value="<?php echo htmlspecialchars($bagItem['cart_item_id']); ?>">
                                 <input type="hidden" name="action" value="decrease">
                                 <input type="hidden" name="redirect" value="<?php echo htmlspecialchars($_SERVER['REQUEST_URI']); ?>">
                                 <button type="submit" class="qty-btn">&minus;</button>
                             </form>
+                            <?php endif; ?>
                             <span class="qty-value"><?php echo (int) $bagItem['quantity']; ?></span>
+                            <?php if (isset($_SESSION['Cust_Id'])): ?>
                             <form method="POST" action="update_cart.php" class="qty-form">
-                                <input type="hidden" name="menu_item_id" value="<?php echo (int) $bagItem['id']; ?>">
+                                <input type="hidden" name="cart_item_id" value="<?php echo htmlspecialchars($bagItem['cart_item_id']); ?>">
                                 <input type="hidden" name="action" value="increase">
                                 <input type="hidden" name="redirect" value="<?php echo htmlspecialchars($_SERVER['REQUEST_URI']); ?>">
                                 <button type="submit" class="qty-btn">+</button>
                             </form>
+                            <?php endif; ?>
                         </div>
                         <span class="unit-price">₱<?php echo number_format($bagItem['price'], 2); ?> each</span>
                     </div>
